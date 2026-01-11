@@ -272,54 +272,6 @@ export function CreateInvoiceModal({
         ));
     }, []);
 
-    const [rateOptions, setRateOptions] = useState<any[]>([]);
-
-    // Calculate FedEx Rate
-    const handleCalculateRate = async () => {
-        if (!originPincode || !destinationPincode || packages.length === 0) {
-            alert("Please fill in Origin Pincode, Destination Pincode, and at least one Package.");
-            return;
-        }
-
-        setLoading(true);
-        setRateOptions([]); // Clear previous
-        try {
-            const response = await fetch('/api/rates/calculate', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    origin: { pincode: originPincode },
-                    destination: { pincode: destinationPincode },
-                    packages: packages.map(p => ({
-                        weight: p.actualWeight,
-                        length: p.length,
-                        width: p.width,
-                        height: p.height
-                    })),
-                    paymentType: paymentMode === 'cod' ? 'COD' : 'Prepaid',
-                    declaredValue: declaredValue
-                })
-            });
-
-            const data = await response.json();
-
-            if (!response.ok) {
-                throw new Error(data.error || 'Failed to fetch rate');
-            }
-
-            if (data.rates && data.rates.length > 0) {
-                setRateOptions(data.rates);
-            } else {
-                alert("No rates available for this route.");
-            }
-        } catch (error: any) {
-            console.error("Rate calculation error:", error);
-            alert("Error fetching rate: " + error.message);
-        } finally {
-            setLoading(false);
-        }
-    };
-
     // Handle form submission
     const handleSubmit = async (saveAsDraft: boolean = false) => {
         setLoading(true);
@@ -747,54 +699,10 @@ export function CreateInvoiceModal({
                         {/* Charges Tab */}
                         {activeTab === "charges" && (
                             <div className="space-y-3 p-4 border rounded-lg">
-                                <div className="flex justify-between items-center">
-                                    <h3 className="font-semibold text-gray-900">Shipping Charges</h3>
-                                    <Button
-                                        type="button"
-                                        variant="outline"
-                                        size="sm"
-                                        onClick={handleCalculateRate}
-                                        disabled={loading || !originPincode || !destinationPincode || packages.length === 0}
-                                        className="text-blue-600 border-blue-200 hover:bg-blue-50"
-                                    >
-                                        {loading ? <Loader2 className="h-3 w-3 mr-1 animate-spin" /> : <Truck className="h-3 w-3 mr-1" />}
-                                        Get Actual Rates
-                                    </Button>
-                                </div>
-
-                                {/* Rate Selection List */}
-                                {rateOptions.length > 0 && (
-                                    <div className="mb-3 border rounded-md overflow-hidden">
-                                        <div className="bg-gray-50 px-3 py-2 border-b text-xs font-medium text-gray-500 flex justify-between">
-                                            <span>Available Services</span>
-                                            <span>Click to Apply</span>
-                                        </div>
-                                        <div className="max-h-40 overflow-y-auto">
-                                            {rateOptions.map((rate, idx) => (
-                                                <div
-                                                    key={idx}
-                                                    onClick={() => {
-                                                        setFreight(rate.rate);
-                                                        setCourierPartner(`${rate.courierName} ${rate.serviceName}`);
-                                                        setRateOptions([]); // Hide list after selection
-                                                    }}
-                                                    className="px-3 py-2 border-b last:border-0 hover:bg-blue-50 cursor-pointer flex justify-between items-center text-sm"
-                                                >
-                                                    <div>
-                                                        <span className="font-semibold text-gray-700">{rate.courierName}</span>
-                                                        <span className="text-gray-500 text-xs ml-2">{rate.serviceName}</span>
-                                                    </div>
-                                                    <div className="font-bold text-blue-600">
-                                                        ₹{rate.rate.toFixed(2)}
-                                                    </div>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    </div>
-                                )}
+                                <h3 className="font-semibold text-gray-900">Shipping Charges</h3>
                                 <div className="grid grid-cols-2 gap-3">
                                     <div>
-                                        <Label className="text-xs">Actual Rate (₹) *</Label>
+                                        <Label className="text-xs">Freight Charges (₹) *</Label>
                                         <Input type="number" min="0" value={freight || ""} onChange={(e) => setFreight(parseFloat(e.target.value) || 0)} className="mt-1 h-9" />
                                     </div>
                                     <div>
