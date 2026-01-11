@@ -33,6 +33,7 @@ const navigation = [
     { name: "Riders", href: "/riders", icon: Truck },
     { name: "Customers", href: "/customers", icon: Users },
     { name: "Banking", href: "/banking", icon: Building },
+    { name: "Actual Charge", href: "/actual-charge", icon: Calculator },
     { name: "GST & Tax", href: "/gst", icon: Calculator },
     { name: "Reports", href: "/reports", icon: PieChart },
     { name: "Analytics", href: "/analytics", icon: BarChart3 },
