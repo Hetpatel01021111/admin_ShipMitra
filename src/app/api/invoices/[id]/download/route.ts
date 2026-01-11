@@ -62,7 +62,7 @@ function generateInvoiceHTML(invoice: any): string {
             <div class="flex justify-between items-start">
                 <div class="flex items-center gap-3">
                     <div class="w-16 h-16 flex items-center justify-center">
-                        <img src="${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/Shipmitra Logo from Photoroom.png" alt="Shipmitra" class="w-full h-full object-contain" />
+                        <img src="${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/shipmitra-logo.png" alt="Shipmitra" class="w-full h-full object-contain" />
                     </div>
                     <div>
                         <h1 class="text-lg font-bold text-gray-900">Shipmitra Tech Private Limited</h1>

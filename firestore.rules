@@ -1,0 +1,133 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // ==========================================
+    // HELPER FUNCTIONS
+    // ==========================================
+    
+    // Check if user is authenticated
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    // Check if user is an admin
+    // We check the 'admins' collection for the user's UID
+    function isAdmin() {
+      return isAuthenticated() && 
+        exists(/databases/$(database)/documents/admins/$(request.auth.uid));
+    }
+    
+    // Check if user is accessing their own document
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+    
+    // Validation for Booking Creation (Public API)
+    // Matches structure in src/app/api/invoices-create/route.ts
+    function isValidBooking() {
+      let data = request.resource.data;
+      return data.keys().hasAll(['senderName', 'receiverName', 'packages', 'createdAt']) &&
+             data.senderName is string &&
+             data.receiverName is string &&
+             data.packages is list;
+    }
+    
+    // Validation for Invoice Creation (Public API)
+    function isValidInvoice() {
+      let data = request.resource.data;
+      return data.keys().hasAll(['invoiceNumber', 'grandTotal', 'packages']) &&
+             data.grandTotal is number;
+    }
+    
+    // ==========================================
+    // ADMIN PANEL & API ACCESS
+    // ==========================================
+    
+    // Admins collection - Only existing admins can read/write others
+    // But we need a way to bootstrap or allow reads for the check
+    match /admins/{adminId} {
+      allow read: if isAuthenticated() && (request.auth.uid == adminId || isAdmin());
+      allow write: if isAdmin(); // Only admins can create other admins
+    }
+    
+    // Bookings/Orders
+    // Public Create: Allowed for external website (with validation)
+    // Read: Admins or Owner
+    // Update/Delete: Admins ONLY (Users cannot modify history)
+    match /bookings/{bookingId} {
+      allow create: if isValidBooking();
+      allow read: if isAdmin() || (isAuthenticated() && resource.data.userId == request.auth.uid);
+      allow update, delete: if isAdmin();
+    }
+    
+    // Invoices
+    // Public Create: Allowed for external website (with validation)
+    // Read: Admins or Owner
+    // Update/Delete: Admins ONLY
+    match /invoices/{invoiceId} {
+      allow create: if isValidInvoice(); 
+      allow read: if isAdmin() || (isAuthenticated() && resource.data.userId == request.auth.uid);
+      allow update, delete: if isAdmin();
+    }
+    
+    // Riders - Managed by Admins
+    match /riders/{riderId} {
+      allow read, write: if isAdmin();
+    }
+    
+    // Users/Customers
+    match /users/{userId} {
+      allow read, write: if isAdmin() || isOwner(userId);
+    }
+    
+    // ==========================================
+    // SHIPMENT & TRACKING COLLECTIONS
+    // ==========================================
+    
+    match /shipments/{shipmentId} {
+      allow read: if isAuthenticated(); // Users track shipments
+      allow write: if isAdmin(); // Only admins update shipment status
+    }
+    
+    match /rate_comparisons/{comparisonId} {
+      allow read, write: if isAuthenticated(); // Users doing rate checks
+    }
+    
+    match /user_activities/{activityId} {
+      allow create: if isAuthenticated(); // Log activity
+      allow read: if isAdmin();
+    }
+    
+    match /user_feedback/{feedbackId} {
+      allow create: if true; // Public feedback
+      allow read: if isAdmin();
+    }
+    
+    match /user_preferences/{userId} {
+      allow read, write: if isAdmin() || isOwner(userId);
+    }
+    
+    match /userProfiles/{userId} {
+      allow read, write: if isAdmin() || isOwner(userId);
+    }
+    
+    match /courierPerformanceRoutes/{routeId} {
+      allow read, write: if isAdmin();
+    }
+    
+    match /userCourierStats/{statsId} {
+      allow read, write: if isAdmin();
+    }
+    
+    // ==========================================
+    // CATCH-ALL
+    // ==========================================
+    
+    // Deny by default for safety, specific collections must be explicitly allowed above
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

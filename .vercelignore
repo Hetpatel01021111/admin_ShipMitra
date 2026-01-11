@@ -1,0 +1,6 @@
+shipmitra-admin/
+shipmitra/
+node_modules/
+.git/
+.next/
+.env.local

@@ -122,7 +122,7 @@ export function InvoicePreview({
                     <div className="flex items-center gap-3">
                         <div className="w-16 h-16 flex items-center justify-center">
                             <img
-                                src="/Shipmitra Logo from Photoroom.png"
+                                src="/shipmitra-logo.png"
                                 alt="Shipmitra"
                                 className="w-full h-full object-contain"
                             />

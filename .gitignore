@@ -41,3 +41,4 @@ yarn-error.log*
 next-env.d.ts
 shipmitra-admin/
 shipmitra/
+.env*.local
