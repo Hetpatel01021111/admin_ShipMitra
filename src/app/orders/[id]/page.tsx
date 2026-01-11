@@ -493,7 +493,7 @@ export default function OrderDetailPage() {
                                 <CardContent className="space-y-3">
                                     <div className="flex items-center justify-between">
                                         <span className="text-gray-500">Amount</span>
-                                        <span className="text-xl font-bold text-green-600">{formatCurrency(order.amount)}</span>
+                                        <span className="text-xl font-bold text-green-600">{formatCurrency(order.amount || 0)}</span>
                                     </div>
                                     <div className="flex items-center justify-between">
                                         <span className="text-gray-500">Status</span>

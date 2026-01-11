@@ -380,7 +380,7 @@ export const getDashboardMetrics = async (): Promise<DashboardMetrics | null> =>
 
         // Calculate metrics
         const todayOrders = orders.filter((o) => {
-            const createdAt = o.createdAt instanceof Date ? o.createdAt : new Date(o.createdAt);
+            const createdAt = o.createdAt instanceof Date ? o.createdAt : new Date(o.createdAt as any);
             return createdAt >= today;
         });
 

@@ -75,7 +75,7 @@ export function RiderModal({ open, onOpenChange, onRiderSaved, editRider }: Ride
         try {
             if (editRider) {
                 // Update existing rider
-                const success = await updateRider(editRider.id, formData);
+                const success = await updateRider(editRider.id, formData as any);
                 if (success) {
                     onRiderSaved();
                     onOpenChange(false);

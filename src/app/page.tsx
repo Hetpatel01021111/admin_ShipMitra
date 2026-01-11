@@ -127,30 +127,30 @@ function DashboardContent() {
             <MetricCard
               title="Today's Orders"
               value={displayMetrics.todayOrders}
-              change={displayMetrics.ordersChange}
+              change={displayMetrics.ordersChange || "0"}
               icon={<Package className="h-6 w-6 text-blue-600" />}
-              trend={displayMetrics.ordersChange.startsWith("+") ? "up" : "down"}
+              trend={displayMetrics.ordersChange?.startsWith("+") ? "up" : "down"}
             />
             <MetricCard
               title="Today's Revenue"
               value={formatCurrency(displayMetrics.todayRevenue)}
-              change={displayMetrics.revenueChange}
+              change={displayMetrics.revenueChange || "0%"}
               icon={<IndianRupee className="h-6 w-6 text-green-600" />}
-              trend={displayMetrics.revenueChange.startsWith("+") ? "up" : "down"}
+              trend={displayMetrics.revenueChange?.startsWith("+") ? "up" : "down"}
             />
             <MetricCard
               title="Active Riders"
               value={displayMetrics.activeRiders}
-              change={displayMetrics.ridersChange}
+              change={displayMetrics.ridersChange || "0"}
               icon={<Truck className="h-6 w-6 text-orange-600" />}
               trend="up"
             />
             <MetricCard
               title="Pending Orders"
               value={displayMetrics.pendingOrders}
-              change={displayMetrics.pendingChange}
+              change={displayMetrics.pendingChange || "0%"}
               icon={<Clock className="h-6 w-6 text-red-600" />}
-              trend={displayMetrics.pendingChange.startsWith("-") ? "up" : "down"}
+              trend={displayMetrics.pendingChange?.startsWith("-") ? "up" : "down"}
             />
           </div>
 
@@ -172,7 +172,7 @@ function DashboardContent() {
                       <XAxis dataKey="date" stroke="#6b7280" />
                       <YAxis stroke="#6b7280" />
                       <Tooltip
-                        formatter={(value: number) => [formatCurrency(value), "Revenue"]}
+                        formatter={(value: any) => [formatCurrency(value), "Revenue"]}
                         contentStyle={{ background: "#fff", border: "1px solid #e5e7eb", borderRadius: "8px" }}
                       />
                       <Line
@@ -204,7 +204,7 @@ function DashboardContent() {
                         innerRadius={40}
                         outerRadius={activeIndex !== null ? 75 : 70}
                         dataKey="value"
-                        label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                        label={({ name, percent }: any) => `${name} ${(percent ? percent * 100 : 0).toFixed(0)}%`}
                         labelLine={false}
                         onMouseEnter={(_, index) => setActiveIndex(index)}
                         onMouseLeave={() => setActiveIndex(null)}
