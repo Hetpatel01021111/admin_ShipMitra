@@ -794,7 +794,7 @@ export function CreateInvoiceModal({
                                 )}
                                 <div className="grid grid-cols-2 gap-3">
                                     <div>
-                                        <Label className="text-xs">Freight Charges (₹) *</Label>
+                                        <Label className="text-xs">Actual Rate (₹) *</Label>
                                         <Input type="number" min="0" value={freight || ""} onChange={(e) => setFreight(parseFloat(e.target.value) || 0)} className="mt-1 h-9" />
                                     </div>
                                     <div>
