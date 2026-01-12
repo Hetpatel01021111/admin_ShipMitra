@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/firebase';
-import { collection, addDoc, getDocs, serverTimestamp } from 'firebase/firestore';
+import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { randomUUID } from 'crypto';
 
 // Secure API Key - Store in environment variable in production
 const API_KEY = process.env.SHIPMITRA_API_KEY || 'sm_live_sk_shipmitra2026_secure_key';
@@ -41,10 +42,8 @@ export async function POST(request: NextRequest) {
             );
         }
 
-        // Generate invoice number
         const year = new Date().getFullYear();
-        const countSnapshot = await getDocs(collection(db, 'invoices'));
-        const invoiceNumber = `SM/${year}/${String(countSnapshot.size + 1).padStart(4, '0')}`;
+        const invoiceNumber = `SM/${year}/${randomUUID().replace(/-/g, '').slice(0, 8).toUpperCase()}`;
 
         // Prepare invoice data
         const invoiceData = {
