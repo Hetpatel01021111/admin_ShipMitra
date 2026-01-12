@@ -1,0 +1,153 @@
+import { NextRequest, NextResponse } from 'next/server';
+import { db } from '@/lib/firebase';
+import { collection, addDoc, getDocs, serverTimestamp } from 'firebase/firestore';
+
+// Secure API Key - Store in environment variable in production
+const API_KEY = process.env.SHIPMITRA_API_KEY || 'sm_live_sk_shipmitra2026_secure_key';
+
+// CORS headers for external access
+const corsHeaders = {
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Methods': 'POST, OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type, X-API-Key, Authorization',
+};
+
+// Handle OPTIONS request for CORS preflight
+export async function OPTIONS() {
+    return NextResponse.json({}, { headers: corsHeaders });
+}
+
+// Create invoice endpoint
+export async function POST(request: NextRequest) {
+    try {
+        // Verify API Key
+        const apiKey = request.headers.get('X-API-Key') || request.headers.get('Authorization')?.replace('Bearer ', '');
+
+        if (!apiKey || apiKey !== API_KEY) {
+            return NextResponse.json(
+                { success: false, error: 'Unauthorized: Invalid API key' },
+                { status: 401, headers: corsHeaders }
+            );
+        }
+
+        // Parse request body
+        const body = await request.json();
+
+        // Validate required fields
+        if (!body.originName) {
+            return NextResponse.json(
+                { success: false, error: 'Missing required field: originName' },
+                { status: 400, headers: corsHeaders }
+            );
+        }
+
+        // Generate invoice number
+        const year = new Date().getFullYear();
+        const countSnapshot = await getDocs(collection(db, 'invoices'));
+        const invoiceNumber = `SM/${year}/${String(countSnapshot.size + 1).padStart(4, '0')}`;
+
+        // Prepare invoice data
+        const invoiceData = {
+            invoiceNumber,
+            invoiceDate: new Date().toISOString(),
+            awbNumber: body.awbNumber || '',
+            courierPartner: body.courierPartner || '',
+
+            // Origin
+            originName: body.originName,
+            originAddress: body.originAddress || '',
+            originCity: body.originCity || '',
+            originState: body.originState || '',
+            originPincode: body.originPincode || '',
+            originPhone: body.originPhone || '',
+            originGstin: body.originGstin || '',
+
+            // Destination
+            destinationName: body.destinationName || '',
+            destinationAddress: body.destinationAddress || '',
+            destinationCity: body.destinationCity || '',
+            destinationState: body.destinationState || '',
+            destinationPincode: body.destinationPincode || '',
+            destinationPhone: body.destinationPhone || '',
+            destinationGstin: body.destinationGstin || '',
+
+            // Packages
+            packages: body.packages || [],
+            declaredValue: body.declaredValue || 0,
+
+            // Payment
+            paymentMode: body.paymentMode || 'prepaid',
+            codAmount: body.codAmount || 0,
+
+            // Charges
+            charges: {
+                freight: body.freight || body.charges?.freight || 0,
+                fuelSurcharge: body.fuelSurcharge || body.charges?.fuelSurcharge || 0,
+                awbFee: body.awbFee || body.charges?.awbFee || 0,
+                odaCharge: body.odaCharge || body.charges?.odaCharge || 0,
+                codCharge: body.codCharge || body.charges?.codCharge || 0,
+                handlingCharge: body.handlingCharge || body.charges?.handlingCharge || 0,
+                insuranceCharge: body.insuranceCharge || body.charges?.insuranceCharge || 0,
+                otherCharges: body.otherCharges || body.charges?.otherCharges || 0,
+            },
+
+            // Calculate totals
+            subtotal: 0,
+            cgst: 0,
+            sgst: 0,
+            igst: 0,
+            grandTotal: 0,
+
+            // Company info
+            companyName: 'Shipmitra Tech Private Limited',
+            companyAddress: '13- Janta Super Market, Rajmahel Road, Mahesana Bazar, Mahesana - 384001, Gujarat',
+            companyGstin: '24AAFCS1234A1ZM',
+            companyPhone: '+91 9429541601',
+
+            // Status and timestamps
+            status: body.status || 'sent',
+            source: 'api', // Mark as created via API
+            createdAt: serverTimestamp(),
+            updatedAt: serverTimestamp(),
+        };
+
+        // Calculate totals
+        const charges = invoiceData.charges;
+        invoiceData.subtotal =
+            charges.freight +
+            charges.fuelSurcharge +
+            charges.awbFee +
+            charges.odaCharge +
+            charges.codCharge +
+            charges.handlingCharge +
+            charges.insuranceCharge +
+            charges.otherCharges;
+
+        invoiceData.cgst = invoiceData.subtotal * 0.09;
+        invoiceData.sgst = invoiceData.subtotal * 0.09;
+        invoiceData.grandTotal = Math.round(invoiceData.subtotal + invoiceData.cgst + invoiceData.sgst);
+
+        // Save to Firestore
+        const docRef = await addDoc(collection(db, 'invoices'), invoiceData);
+
+        // Return success response with invoice details
+        return NextResponse.json({
+            success: true,
+            message: 'Invoice created successfully',
+            data: {
+                id: docRef.id,
+                invoiceNumber,
+                grandTotal: invoiceData.grandTotal,
+                invoiceUrl: `${process.env.NEXT_PUBLIC_BASE_URL || 'https://admin.shipmitra.net'}/api/invoices/${docRef.id}`,
+                downloadUrl: `${process.env.NEXT_PUBLIC_BASE_URL || 'https://admin.shipmitra.net'}/api/invoices/${docRef.id}/download`,
+            },
+        }, { status: 201, headers: corsHeaders });
+
+    } catch (error) {
+        console.error('Error creating invoice:', error);
+        return NextResponse.json(
+            { success: false, error: 'Internal server error' },
+            { status: 500, headers: corsHeaders }
+        );
+    }
+}
