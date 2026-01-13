@@ -115,34 +115,34 @@ export function InvoicePreview({
     const totalBoxes = packages.reduce((sum, pkg) => sum + pkg.boxes, 0);
 
     return (
-        <div id="invoice-preview" className="bg-white rounded-lg shadow-lg overflow-hidden text-xs border border-gray-300">
+        <div id="invoice-preview" className="bg-white rounded-lg shadow-lg overflow-hidden text-[10px] border border-gray-300">
             {/* Header - White background for print-friendly */}
-            <div className="bg-white border-b-2 border-gray-200 p-4">
+            <div className="bg-white border-b-2 border-gray-200 p-2">
                 <div className="flex justify-between items-start">
                     <div className="flex items-center gap-3">
                         <div className="w-16 h-16 flex items-center justify-center">
                             <img
-                                src="/Shipmitra Logo from Photoroom.png"
+                                src="https://shipmitra-admin.vercel.app/logo.png"
                                 alt="Shipmitra"
                                 className="w-full h-full object-contain"
                             />
                         </div>
                         <div>
-                            <h1 className="text-lg font-bold text-gray-900">{COMPANY.name}</h1>
-                            <p className="text-[10px] text-gray-600">{COMPANY.address}</p>
-                            <p className="text-[10px] text-gray-600">GSTIN: {COMPANY.gstin} | {COMPANY.phone}</p>
+                            <h1 className="text-base font-bold text-gray-900">{COMPANY.name}</h1>
+                            <p className="text-[9px] text-gray-600">{COMPANY.address}</p>
+                            <p className="text-[9px] text-gray-600">GSTIN: {COMPANY.gstin} | {COMPANY.phone}</p>
                         </div>
                     </div>
                     <div className="text-right">
-                        <h2 className="text-xl font-bold uppercase tracking-wide text-blue-600">Shipping Invoice</h2>
-                        <p className="text-[10px] text-gray-500 mt-1">
+                        <h2 className="text-lg font-bold uppercase tracking-wide text-blue-600">Shipping Invoice</h2>
+                        <p className="text-[9px] text-gray-500 mt-1">
                             Invoice # <span className="font-medium text-gray-900">{invoiceNumber || "(Auto-generated)"}</span>
                         </p>
-                        <p className="text-[10px] text-gray-500">
+                        <p className="text-[9px] text-gray-500">
                             Date: <span className="font-medium text-gray-900">{invoiceDate}</span>
                         </p>
                         {awbNumber && (
-                            <p className="text-[10px] text-blue-600 font-semibold mt-1">
+                            <p className="text-[9px] text-blue-600 font-semibold mt-1">
                                 AWB: {awbNumber}
                             </p>
                         )}
@@ -150,34 +150,34 @@ export function InvoicePreview({
                 </div>
             </div>
 
-            <div className="p-4">
+            <div className="p-2">
                 {/* Route & Summary Row */}
-                <div className="grid grid-cols-4 gap-3 mb-4 p-3 bg-gray-50 rounded-lg border">
+                <div className="grid grid-cols-4 gap-2 mb-2 p-2 bg-gray-50 rounded-lg border">
                     <div>
-                        <p className="text-[10px] text-gray-500 uppercase">Origin</p>
+                        <p className="text-[9px] text-gray-500 uppercase">Origin</p>
                         <p className="font-bold text-gray-900">{originCity || "---"}</p>
                     </div>
                     <div>
-                        <p className="text-[10px] text-gray-500 uppercase">Destination</p>
+                        <p className="text-[9px] text-gray-500 uppercase">Destination</p>
                         <p className="font-bold text-gray-900">{destinationCity || "---"}</p>
                     </div>
                     <div>
-                        <p className="text-[10px] text-gray-500 uppercase">No. of Pkgs</p>
+                        <p className="text-[9px] text-gray-500 uppercase">No. of Pkgs</p>
                         <p className="font-bold text-gray-900">{totalBoxes || 0}</p>
                     </div>
                     <div>
-                        <p className="text-[10px] text-gray-500 uppercase">Decl. Value (₹)</p>
+                        <p className="text-[9px] text-gray-500 uppercase">Decl. Value (₹)</p>
                         <p className="font-bold text-gray-900">{declaredValue > 0 ? formatCurrency(declaredValue) : "---"}</p>
                     </div>
                 </div>
 
                 {/* Consignor & Consignee */}
-                <div className="grid grid-cols-2 gap-4 mb-4">
+                <div className="grid grid-cols-2 gap-2 mb-2">
                     {/* Consignor (From) */}
-                    <div className="border rounded-lg p-3">
-                        <div className="flex items-center gap-2 mb-2 pb-2 border-b">
-                            <span className="bg-blue-100 text-blue-700 px-2 py-0.5 rounded text-[10px] font-semibold">CONSIGNOR</span>
-                            <span className="text-gray-500 text-[10px]">From / Shipper</span>
+                    <div className="border rounded-lg p-2">
+                        <div className="flex items-center gap-2 mb-1 pb-1 border-b">
+                            <span className="bg-blue-100 text-blue-700 px-2 py-0.5 rounded text-[9px] font-semibold">CONSIGNOR</span>
+                            <span className="text-gray-500 text-[9px]">From / Shipper</span>
                         </div>
                         {originName && <p className="font-bold text-gray-900">{originName}</p>}
                         {originAddress && <p className="text-gray-600">{originAddress}</p>}
@@ -191,10 +191,10 @@ export function InvoicePreview({
                     </div>
 
                     {/* Consignee (To) */}
-                    <div className="border rounded-lg p-3">
-                        <div className="flex items-center gap-2 mb-2 pb-2 border-b">
-                            <span className="bg-green-100 text-green-700 px-2 py-0.5 rounded text-[10px] font-semibold">CONSIGNEE</span>
-                            <span className="text-gray-500 text-[10px]">To / Receiver</span>
+                    <div className="border rounded-lg p-2">
+                        <div className="flex items-center gap-2 mb-1 pb-1 border-b">
+                            <span className="bg-green-100 text-green-700 px-2 py-0.5 rounded text-[9px] font-semibold">CONSIGNEE</span>
+                            <span className="text-gray-500 text-[9px]">To / Receiver</span>
                         </div>
                         {destinationName && <p className="font-bold text-gray-900">{destinationName}</p>}
                         {destinationAddress && <p className="text-gray-600">{destinationAddress}</p>}
@@ -209,9 +209,9 @@ export function InvoicePreview({
                 </div>
 
                 {/* Package Details Table */}
-                <div className="mb-4">
-                    <p className="font-semibold text-gray-700 mb-2 text-[11px] uppercase">Package Details</p>
-                    <table className="w-full border text-[10px]">
+                <div className="mb-2">
+                    <p className="font-semibold text-gray-700 mb-1 text-[10px] uppercase">Package Details</p>
+                    <table className="w-full border text-[9px]">
                         <thead className="bg-gray-100">
                             <tr>
                                 <th className="border px-2 py-1 text-left">Sr.</th>
@@ -257,11 +257,11 @@ export function InvoicePreview({
                 </div>
 
                 {/* Charges & Courier Info */}
-                <div className="grid grid-cols-2 gap-4 mb-4">
+                <div className="grid grid-cols-2 gap-2 mb-2">
                     {/* Courier Info */}
-                    <div className="border rounded-lg p-3">
-                        <p className="font-semibold text-gray-700 mb-2 text-[11px] uppercase">Shipment Info</p>
-                        <div className="space-y-1 text-[11px]">
+                    <div className="border rounded-lg p-2">
+                        <p className="font-semibold text-gray-700 mb-1 text-[10px] uppercase">Shipment Info</p>
+                        <div className="space-y-1 text-[9px]">
                             {courierPartner && (
                                 <div className="flex justify-between">
                                     <span className="text-gray-600">Courier Partner:</span>
@@ -290,9 +290,9 @@ export function InvoicePreview({
                     </div>
 
                     {/* Charges Breakdown */}
-                    <div className="border rounded-lg p-3">
-                        <p className="font-semibold text-gray-700 mb-2 text-[11px] uppercase">Charges Breakdown</p>
-                        <div className="space-y-1 text-[11px]">
+                    <div className="border rounded-lg p-2">
+                        <p className="font-semibold text-gray-700 mb-1 text-[10px] uppercase">Charges Breakdown</p>
+                        <div className="space-y-1 text-[9px]">
                             {charges.freight > 0 && (
                                 <div className="flex justify-between">
                                     <span className="text-gray-600">Freight Charges</span>
@@ -366,9 +366,9 @@ export function InvoicePreview({
                 </div>
 
                 {/* Footer */}
-                <div className="text-center pt-3 border-t">
-                    <p className="text-[10px] text-gray-500">Thank you for shipping with Shipmitra!</p>
-                    <p className="text-[10px] text-gray-400">Track: {COMPANY.website} | Support: {COMPANY.phone}</p>
+                <div className="text-center pt-2 border-t">
+                    <p className="text-[9px] text-gray-500">Thank you for shipping with Shipmitra!</p>
+                    <p className="text-[9px] text-gray-400">Track: {COMPANY.website} | Support: {COMPANY.phone}</p>
                 </div>
             </div>
         </div>

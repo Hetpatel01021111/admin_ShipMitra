@@ -92,7 +92,7 @@ function InvoicesContent() {
 
     // Action handlers
     const handleView = (invoice: Invoice) => {
-        window.open(`/api/invoices/${invoice.id}`, '_blank');
+        window.open(`/invoice/${invoice.id}`, '_blank');
     };
 
     const handleDownload = (invoice: Invoice) => {

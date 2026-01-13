@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/firebase';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import { randomUUID } from 'crypto';
+import { sendInvoiceEmail } from '@/lib/email';
 
 // Secure API Key - Store in environment variable in production
 const API_KEY = process.env.SHIPMITRA_API_KEY || 'sm_live_sk_shipmitra2026_secure_key';
@@ -90,7 +91,7 @@ export async function POST(request: NextRequest) {
                 otherCharges: body.otherCharges || body.charges?.otherCharges || 0,
             },
 
-            // Calculate totals
+            // Calculate totals (placeholders, will be updated below)
             subtotal: 0,
             cgst: 0,
             sgst: 0,
@@ -113,15 +114,17 @@ export async function POST(request: NextRequest) {
         // Calculate totals
         const charges = invoiceData.charges;
         invoiceData.subtotal =
-            charges.freight +
-            charges.fuelSurcharge +
-            charges.awbFee +
-            charges.odaCharge +
-            charges.codCharge +
-            charges.handlingCharge +
-            charges.insuranceCharge +
-            charges.otherCharges;
+            Number(charges.freight) +
+            Number(charges.fuelSurcharge) +
+            Number(charges.awbFee) +
+            Number(charges.odaCharge) +
+            Number(charges.codCharge) +
+            Number(charges.handlingCharge) +
+            Number(charges.insuranceCharge) +
+            Number(charges.otherCharges);
 
+        // Simple tax calculation (assuming intra-state 18% split for now, or use logic if state provided)
+        // For simplicity, using 9% CGST + 9% SGST as in original code
         invoiceData.cgst = invoiceData.subtotal * 0.09;
         invoiceData.sgst = invoiceData.subtotal * 0.09;
         invoiceData.grandTotal = Math.round(invoiceData.subtotal + invoiceData.cgst + invoiceData.sgst);
@@ -129,16 +132,25 @@ export async function POST(request: NextRequest) {
         // Save to Firestore
         const docRef = await addDoc(collection(db, 'invoices'), invoiceData);
 
+        // Send Email if customer email is provided
+        const customerEmail = body.customerEmail || body.email || body.destinationEmail;
+        const invoiceUrl = `https://shipmitra-admin.vercel.app/invoice/${docRef.id}`;
+        
+        if (customerEmail) {
+            await sendInvoiceEmail(customerEmail, invoiceUrl, invoiceNumber);
+        }
+
         // Return success response with invoice details
         return NextResponse.json({
             success: true,
             message: 'Invoice created successfully',
+            emailSent: !!customerEmail,
             data: {
                 id: docRef.id,
                 invoiceNumber,
                 grandTotal: invoiceData.grandTotal,
-                invoiceUrl: `${process.env.NEXT_PUBLIC_BASE_URL || 'https://admin.shipmitra.net'}/api/invoices/${docRef.id}`,
-                downloadUrl: `${process.env.NEXT_PUBLIC_BASE_URL || 'https://admin.shipmitra.net'}/api/invoices/${docRef.id}/download`,
+                invoiceUrl: invoiceUrl,
+                downloadUrl: invoiceUrl,
             },
         }, { status: 201, headers: corsHeaders });
 

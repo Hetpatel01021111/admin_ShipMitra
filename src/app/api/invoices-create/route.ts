@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/firebase';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import { randomUUID } from 'crypto';
+import { sendInvoiceEmail } from '@/lib/email';
 
 // Secure API Key - Store in environment variable in production
 const API_KEY = process.env.SHIPMITRA_API_KEY || 'sm_live_sk_shipmitra2026_secure_key';
@@ -194,7 +195,14 @@ export async function POST(request: NextRequest) {
         // (We can't update here easily without doc reference, but bookingId is in invoice now)
 
         // Return success response with invoice details
-        const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
+        const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://shipmitra-admin.vercel.app';
+        const invoiceUrl = `${baseUrl}/invoice/${docRef.id}`;
+
+        // Send Email if customer email is provided
+        const customerEmail = body.customerEmail || body.email || body.destinationEmail || body.receiverDetails?.email;
+        if (customerEmail) {
+            await sendInvoiceEmail(customerEmail, invoiceUrl, invoiceNumber);
+        }
 
         return NextResponse.json({
             success: true,
@@ -203,8 +211,8 @@ export async function POST(request: NextRequest) {
                 id: docRef.id,
                 invoiceNumber,
                 grandTotal: invoiceData.grandTotal,
-                invoiceUrl: `${baseUrl}/api/invoices/${docRef.id}`,
-                downloadUrl: `${baseUrl}/api/invoices/${docRef.id}/download`,
+                invoiceUrl: `${baseUrl}/invoice/${docRef.id}`,
+                downloadUrl: `${baseUrl}/invoice/${docRef.id}`,
             },
         }, { status: 201, headers: corsHeaders });
 

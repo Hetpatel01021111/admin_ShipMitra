@@ -73,8 +73,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 setUser(null);
                 setAdminUser(null);
 
-                // Redirect to login if not on login page
-                if (pathname !== "/login") {
+                // Redirect to login if not on login page or public paths
+                const isPublicPath = pathname === "/login" || pathname.startsWith("/invoice/");
+                if (!isPublicPath) {
                     router.push("/login");
                 }
             }
@@ -173,7 +174,8 @@ export function ProtectedRoute({ children }: { children: ReactNode }) {
     const pathname = usePathname();
 
     useEffect(() => {
-        if (!loading && !user && !adminUser && pathname !== "/login") {
+        const isPublicPath = pathname === "/login" || pathname.startsWith("/invoice/");
+        if (!loading && !user && !adminUser && !isPublicPath) {
             router.push("/login");
         }
     }, [user, adminUser, loading, pathname, router]);
@@ -189,7 +191,8 @@ export function ProtectedRoute({ children }: { children: ReactNode }) {
         );
     }
 
-    if (!user && !adminUser && pathname !== "/login") {
+    const isPublicPath = pathname === "/login" || pathname.startsWith("/invoice/");
+    if (!user && !adminUser && !isPublicPath) {
         return null;
     }
 

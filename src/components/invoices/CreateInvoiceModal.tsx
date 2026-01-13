@@ -12,6 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { InvoicePreview } from "./InvoicePreview";
 import { createInvoice, getNextInvoiceNumber, updateInvoice } from "@/lib/data";
+import { generateInvoiceHTML } from "@/lib/invoice-generator";
 import { Plus, Trash2, Download, Save, Loader2, Package, MapPin, Truck } from "lucide-react";
 
 interface PackageDetails {
@@ -395,41 +396,49 @@ export function CreateInvoiceModal({
 
     // Download PDF using print
     const handleDownloadPDF = useCallback(() => {
-        const printContent = document.getElementById('invoice-preview');
-        if (!printContent) return;
+        const invoiceData = {
+            invoiceNumber,
+            invoiceDate: new Date().toISOString(),
+            awbNumber,
+            courierPartner,
+            originName,
+            originAddress,
+            originCity,
+            originState,
+            originPincode,
+            originPhone,
+            originGstin,
+            destinationName,
+            destinationAddress,
+            destinationCity,
+            destinationState,
+            destinationPincode,
+            destinationPhone,
+            destinationGstin,
+            packages: packagesWithDimWeight,
+            declaredValue,
+            paymentMode,
+            codAmount: paymentMode === 'cod' ? codAmount : 0,
+            charges: chargesObj,
+            subtotal: calculations.subtotal,
+            cgst: calculations.cgst,
+            sgst: calculations.sgst,
+            grandTotal: calculations.grandTotal,
+        };
+
+        const html = generateInvoiceHTML(invoiceData);
 
         const printWindow = window.open('', '_blank');
         if (!printWindow) return;
 
-        printWindow.document.write(`
-            <!DOCTYPE html>
-            <html>
-            <head>
-                <title>Shipping Invoice - ${invoiceNumber || awbNumber || originName || 'Invoice'}</title>
-                <script src="https://cdn.tailwindcss.com"></script>
-                <style>
-                    body { font-family: 'Inter', system-ui, sans-serif; }
-                    @page { margin: 0.3in; size: A4; }
-                    @media print {
-                        body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-                    }
-                </style>
-            </head>
-            <body>
-                ${printContent.outerHTML}
-                <script>
-                    window.onload = function() {
-                        setTimeout(function() {
-                            window.print();
-                            window.close();
-                        }, 500);
-                    }
-                </script>
-            </body>
-            </html>
-        `);
+        printWindow.document.write(html);
         printWindow.document.close();
-    }, [invoiceNumber, awbNumber, originName]);
+    }, [
+        invoiceNumber, awbNumber, courierPartner,
+        originName, originAddress, originCity, originState, originPincode, originPhone, originGstin,
+        destinationName, destinationAddress, destinationCity, destinationState, destinationPincode, destinationPhone, destinationGstin,
+        packagesWithDimWeight, declaredValue, paymentMode, codAmount, chargesObj, calculations
+    ]);
 
     // Reset form
     const resetForm = () => {
