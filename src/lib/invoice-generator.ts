@@ -42,12 +42,13 @@ export function generateInvoiceHTML(invoice: any): string {
         @page { margin: 0.3in; size: A4; }
         @media print {
             body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+            .invoice-container { max-height: 50vh; overflow: hidden; page-break-inside: avoid; }
             .no-print { display: none; }
         }
     </style>
 </head>
 <body class="bg-gray-100 p-4">
-    <div class="max-w-4xl mx-auto bg-white rounded-lg shadow-lg overflow-hidden text-[10px] border border-gray-300">
+    <div class="invoice-container max-w-4xl mx-auto bg-white rounded-lg shadow-lg overflow-hidden text-[10px] border border-gray-300">
         <!-- Header - White background for print-friendly -->
         <div class="bg-white border-b-2 border-gray-200 p-2">
             <div class="flex justify-between items-start">
