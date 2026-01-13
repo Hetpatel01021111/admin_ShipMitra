@@ -29,7 +29,7 @@ export default function InvoiceView({ invoice }: InvoiceViewProps) {
                 </div>
 
                 {/* Invoice Content */}
-                <div className="bg-white shadow-lg rounded-lg overflow-hidden print:shadow-none print:rounded-none print:max-h-[50vh]">
+                <div className="bg-white shadow-lg rounded-lg print:shadow-none print:rounded-none">
                     <InvoicePreview
                         invoiceNumber={invoice.invoiceNumber}
                         invoiceDate={invoice.invoiceDate}
@@ -77,11 +77,6 @@ export default function InvoiceView({ invoice }: InvoiceViewProps) {
                     }
                     body {
                         background: white;
-                    }
-                    /* Ensure content fits half page */
-                    .print\:max-h-\[50vh\] {
-                        max-height: 50vh !important;
-                        overflow: hidden !important;
                     }
                     /* Hide header/footer/sidebar from admin layout if they exist */
                     nav, header, aside, footer {

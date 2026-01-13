@@ -42,15 +42,15 @@ export function generateInvoiceHTML(invoice: any): string {
         @page { margin: 0.3in; size: A4; }
         @media print {
             body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-            .invoice-container { max-height: 50vh; overflow: hidden; page-break-inside: avoid; }
+            .invoice-container { page-break-inside: avoid; }
             .no-print { display: none; }
         }
     </style>
 </head>
 <body class="bg-gray-100 p-4">
-    <div class="invoice-container max-w-4xl mx-auto bg-white rounded-lg shadow-lg overflow-hidden text-[10px] border border-gray-300">
+    <div class="invoice-container max-w-4xl mx-auto bg-white rounded-lg shadow-lg text-[10px] border border-gray-300">
         <!-- Header - White background for print-friendly -->
-        <div class="bg-white border-b-2 border-gray-200 p-2">
+        <div class="bg-white border-b-2 border-gray-200 p-1.5">
             <div class="flex justify-between items-start">
                 <div class="flex items-center gap-3">
                     <div class="w-16 h-16 flex items-center justify-center">
@@ -71,9 +71,9 @@ export function generateInvoiceHTML(invoice: any): string {
             </div>
         </div>
 
-        <div class="p-2">
+        <div class="p-1.5">
             <!-- Route & Summary Row -->
-            <div class="grid grid-cols-4 gap-2 mb-2 p-2 bg-gray-50 rounded-lg border">
+            <div class="grid grid-cols-4 gap-2 mb-1.5 p-1.5 bg-gray-50 rounded-lg border">
                 <div>
                     <p class="text-[9px] text-gray-500 uppercase">Origin</p>
                     <p class="font-bold text-gray-900">${invoice.originCity || '---'}</p>
@@ -93,9 +93,9 @@ export function generateInvoiceHTML(invoice: any): string {
             </div>
 
             <!-- Consignor & Consignee -->
-            <div class="grid grid-cols-2 gap-2 mb-2">
+            <div class="grid grid-cols-2 gap-2 mb-1.5">
                 <!-- Consignor (From) -->
-                <div class="border rounded-lg p-2">
+                <div class="border rounded-lg p-1.5">
                     <div class="flex items-center gap-2 mb-1 pb-1 border-b">
                         <span class="bg-blue-100 text-blue-700 px-2 py-0.5 rounded text-[9px] font-semibold">CONSIGNOR</span>
                         <span class="text-gray-500 text-[9px]">From / Shipper</span>
@@ -108,7 +108,7 @@ export function generateInvoiceHTML(invoice: any): string {
                 </div>
 
                 <!-- Consignee (To) -->
-                <div class="border rounded-lg p-2">
+                <div class="border rounded-lg p-1.5">
                     <div class="flex items-center gap-2 mb-1 pb-1 border-b">
                         <span class="bg-green-100 text-green-700 px-2 py-0.5 rounded text-[9px] font-semibold">CONSIGNEE</span>
                         <span class="text-gray-500 text-[9px]">To / Receiver</span>
@@ -122,7 +122,7 @@ export function generateInvoiceHTML(invoice: any): string {
             </div>
 
             <!-- Package Details Table -->
-            <div class="mb-2">
+            <div class="mb-1.5">
                 <p class="font-semibold text-gray-700 mb-1 text-[10px] uppercase">Package Details</p>
                 <table class="w-full border text-[9px]">
                     <thead class="bg-gray-100">
@@ -150,9 +150,9 @@ export function generateInvoiceHTML(invoice: any): string {
             </div>
 
             <!-- Charges & Courier Info -->
-            <div class="grid grid-cols-2 gap-2 mb-2">
+            <div class="grid grid-cols-2 gap-2 mb-1.5">
                 <!-- Courier Info -->
-                <div class="border rounded-lg p-2">
+                <div class="border rounded-lg p-1.5">
                     <p class="font-semibold text-gray-700 mb-1 text-[10px] uppercase">Shipment Info</p>
                     <div class="space-y-1 text-[9px]">
                         ${invoice.courierPartner ? `<div class="flex justify-between"><span class="text-gray-600">Courier Partner:</span><span class="font-medium">${invoice.courierPartner}</span></div>` : ''}
@@ -166,7 +166,7 @@ export function generateInvoiceHTML(invoice: any): string {
                 </div>
 
                 <!-- Charges Breakdown -->
-                <div class="border rounded-lg p-2">
+                <div class="border rounded-lg p-1.5">
                     <p class="font-semibold text-gray-700 mb-1 text-[10px] uppercase">Charges Breakdown</p>
                     <div class="space-y-1 text-[9px]">
                         ${charges.freight > 0 ? `<div class="flex justify-between"><span class="text-gray-600">Freight Charges</span><span>${formatCurrency(charges.freight)}</span></div>` : ''}
@@ -188,7 +188,7 @@ export function generateInvoiceHTML(invoice: any): string {
             </div>
 
             <!-- Footer -->
-            <div class="text-center pt-2 border-t">
+            <div class="text-center pt-1 border-t">
                 <p class="text-[9px] text-gray-500">Thank you for shipping with Shipmitra!</p>
                 <p class="text-[9px] text-gray-400">Track: www.shipmitra.net | Support: +91 9429541601</p>
             </div>

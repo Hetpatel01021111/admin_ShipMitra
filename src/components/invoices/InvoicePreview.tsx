@@ -117,7 +117,7 @@ export function InvoicePreview({
     return (
         <div id="invoice-preview" className="bg-white rounded-lg shadow-lg overflow-hidden text-[10px] border border-gray-300">
             {/* Header - White background for print-friendly */}
-            <div className="bg-white border-b-2 border-gray-200 p-2">
+            <div className="bg-white border-b-2 border-gray-200 p-1.5">
                 <div className="flex justify-between items-start">
                     <div className="flex items-center gap-3">
                         <div className="w-16 h-16 flex items-center justify-center">
@@ -150,9 +150,9 @@ export function InvoicePreview({
                 </div>
             </div>
 
-            <div className="p-2">
+            <div className="p-1.5">
                 {/* Route & Summary Row */}
-                <div className="grid grid-cols-4 gap-2 mb-2 p-2 bg-gray-50 rounded-lg border">
+                <div className="grid grid-cols-4 gap-2 mb-1.5 p-1.5 bg-gray-50 rounded-lg border">
                     <div>
                         <p className="text-[9px] text-gray-500 uppercase">Origin</p>
                         <p className="font-bold text-gray-900">{originCity || "---"}</p>
@@ -172,9 +172,9 @@ export function InvoicePreview({
                 </div>
 
                 {/* Consignor & Consignee */}
-                <div className="grid grid-cols-2 gap-2 mb-2">
+                <div className="grid grid-cols-2 gap-2 mb-1.5">
                     {/* Consignor (From) */}
-                    <div className="border rounded-lg p-2">
+                    <div className="border rounded-lg p-1.5">
                         <div className="flex items-center gap-2 mb-1 pb-1 border-b">
                             <span className="bg-blue-100 text-blue-700 px-2 py-0.5 rounded text-[9px] font-semibold">CONSIGNOR</span>
                             <span className="text-gray-500 text-[9px]">From / Shipper</span>
@@ -191,7 +191,7 @@ export function InvoicePreview({
                     </div>
 
                     {/* Consignee (To) */}
-                    <div className="border rounded-lg p-2">
+                    <div className="border rounded-lg p-1.5">
                         <div className="flex items-center gap-2 mb-1 pb-1 border-b">
                             <span className="bg-green-100 text-green-700 px-2 py-0.5 rounded text-[9px] font-semibold">CONSIGNEE</span>
                             <span className="text-gray-500 text-[9px]">To / Receiver</span>
@@ -209,7 +209,7 @@ export function InvoicePreview({
                 </div>
 
                 {/* Package Details Table */}
-                <div className="mb-2">
+                <div className="mb-1.5">
                     <p className="font-semibold text-gray-700 mb-1 text-[10px] uppercase">Package Details</p>
                     <table className="w-full border text-[9px]">
                         <thead className="bg-gray-100">
@@ -237,29 +237,39 @@ export function InvoicePreview({
                                     <tr key={index}>
                                         <td className="border px-2 py-1">{index + 1}</td>
                                         <td className="border px-2 py-1">{pkg.productName || "Package"}</td>
-                                        <td className="border px-2 py-1 text-center">{pkg.boxes}</td>
-                                        <td className="border px-2 py-1 text-center">{pkg.quantity}</td>
+                                        <td className="border px-2 py-1 text-center">{pkg.boxes || 1}</td>
+                                        <td className="border px-2 py-1 text-center">{pkg.quantity || 1}</td>
                                         <td className="border px-2 py-1 text-center">{pkg.length || "-"}</td>
                                         <td className="border px-2 py-1 text-center">{pkg.width || "-"}</td>
                                         <td className="border px-2 py-1 text-center">{pkg.height || "-"}</td>
-                                        <td className="border px-2 py-1 text-right">{pkg.dimWeight > 0 ? pkg.dimWeight.toFixed(2) : "-"}</td>
-                                        <td className="border px-2 py-1 text-right">{pkg.actualWeight > 0 ? pkg.actualWeight.toFixed(2) : "-"}</td>
+                                        <td className="border px-2 py-1 text-right">
+                                            {pkg.dimWeight > 0 ? pkg.dimWeight.toFixed(2) : "-"}
+                                        </td>
+                                        <td className="border px-2 py-1 text-right">
+                                            {pkg.actualWeight > 0 ? pkg.actualWeight.toFixed(2) : "-"}
+                                        </td>
                                     </tr>
                                 ))
                             )}
                             <tr className="bg-gray-50 font-semibold">
-                                <td colSpan={7} className="border px-2 py-1 text-right">Total Weight (kg):</td>
-                                <td className="border px-2 py-1 text-right">{totalDimWeight > 0 ? totalDimWeight.toFixed(2) : "-"}</td>
-                                <td className="border px-2 py-1 text-right">{totalActualWeight > 0 ? totalActualWeight.toFixed(2) : "-"}</td>
+                                <td colSpan={7} className="border px-2 py-1 text-right">
+                                    Total Weight (kg):
+                                </td>
+                                <td className="border px-2 py-1 text-right">
+                                    {totalDimWeight > 0 ? totalDimWeight.toFixed(2) : "-"}
+                                </td>
+                                <td className="border px-2 py-1 text-right">
+                                    {totalActualWeight > 0 ? totalActualWeight.toFixed(2) : "-"}
+                                </td>
                             </tr>
                         </tbody>
                     </table>
                 </div>
 
                 {/* Charges & Courier Info */}
-                <div className="grid grid-cols-2 gap-2 mb-2">
+                <div className="grid grid-cols-2 gap-2 mb-1.5">
                     {/* Courier Info */}
-                    <div className="border rounded-lg p-2">
+                    <div className="border rounded-lg p-1.5">
                         <p className="font-semibold text-gray-700 mb-1 text-[10px] uppercase">Shipment Info</p>
                         <div className="space-y-1 text-[9px]">
                             {courierPartner && (
@@ -270,11 +280,18 @@ export function InvoicePreview({
                             )}
                             <div className="flex justify-between">
                                 <span className="text-gray-600">Payment Mode:</span>
-                                <span className={`font-medium uppercase ${paymentMode === 'prepaid' ? 'text-green-600' :
-                                    paymentMode === 'cod' ? 'text-orange-600' : 'text-blue-600'
-                                    }`}>{paymentMode}</span>
+                                <span
+                                    className={`font-medium uppercase ${paymentMode === "prepaid"
+                                            ? "text-green-600"
+                                            : paymentMode === "cod"
+                                                ? "text-orange-600"
+                                                : "text-blue-600"
+                                        }`}
+                                >
+                                    {paymentMode || "Prepaid"}
+                                </span>
                             </div>
-                            {paymentMode === 'cod' && codAmount && codAmount > 0 && (
+                            {paymentMode === "cod" && codAmount && codAmount > 0 && (
                                 <div className="flex justify-between">
                                     <span className="text-gray-600">COD Amount:</span>
                                     <span className="font-bold text-orange-600">{formatCurrency(codAmount)}</span>
@@ -283,14 +300,16 @@ export function InvoicePreview({
                             {(totalActualWeight > 0 || totalDimWeight > 0) && (
                                 <div className="flex justify-between">
                                     <span className="text-gray-600">Chargeable Weight:</span>
-                                    <span className="font-medium">{Math.max(totalActualWeight, totalDimWeight).toFixed(2)} kg</span>
+                                    <span className="font-medium">
+                                        {Math.max(totalActualWeight, totalDimWeight).toFixed(2)} kg
+                                    </span>
                                 </div>
                             )}
                         </div>
                     </div>
 
                     {/* Charges Breakdown */}
-                    <div className="border rounded-lg p-2">
+                    <div className="border rounded-lg p-1.5">
                         <p className="font-semibold text-gray-700 mb-1 text-[10px] uppercase">Charges Breakdown</p>
                         <div className="space-y-1 text-[9px]">
                             {charges.freight > 0 && (
@@ -341,7 +360,8 @@ export function InvoicePreview({
                                     <span>{formatCurrency(charges.otherCharges)}</span>
                                 </div>
                             )}
-                            {subtotal > 0 && (
+
+                            {subtotal > 0 ? (
                                 <>
                                     <div className="flex justify-between pt-1 border-t">
                                         <span className="text-gray-700 font-medium">Subtotal</span>
@@ -349,24 +369,29 @@ export function InvoicePreview({
                                     </div>
                                     <div className="flex justify-between">
                                         <span className="text-gray-600">CGST (9%)</span>
-                                        <span>{formatCurrency(cgst)}</span>
+                                        <span>{formatCurrency(cgst || 0)}</span>
                                     </div>
                                     <div className="flex justify-between">
                                         <span className="text-gray-600">SGST (9%)</span>
-                                        <span>{formatCurrency(sgst)}</span>
+                                        <span>{formatCurrency(sgst || 0)}</span>
                                     </div>
                                     <div className="flex justify-between pt-1 border-t-2 border-gray-900">
                                         <span className="font-bold text-gray-900">Grand Total</span>
-                                        <span className="font-bold text-gray-900">{formatCurrency(grandTotal)}</span>
+                                        <span className="font-bold text-gray-900">{formatCurrency(grandTotal || 0)}</span>
                                     </div>
                                 </>
+                            ) : (
+                                <div className="flex justify-between pt-1 border-t-2 border-gray-900">
+                                    <span className="font-bold text-gray-900">Grand Total</span>
+                                    <span className="font-bold text-gray-900">{formatCurrency(grandTotal || 0)}</span>
+                                </div>
                             )}
                         </div>
                     </div>
                 </div>
 
                 {/* Footer */}
-                <div className="text-center pt-2 border-t">
+                <div className="text-center pt-1 border-t">
                     <p className="text-[9px] text-gray-500">Thank you for shipping with Shipmitra!</p>
                     <p className="text-[9px] text-gray-400">Track: {COMPANY.website} | Support: {COMPANY.phone}</p>
                 </div>
