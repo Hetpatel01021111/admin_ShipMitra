@@ -59,7 +59,7 @@ export function generateInvoiceHTML(invoice: any): string {
                     <div>
                         <h1 class="text-base font-bold text-gray-900">Shipmitra Tech Private Limited</h1>
                         <p class="text-[9px] text-gray-600">13- Janta Super Market, Rajmahel Road, Mahesana Bazar, Mahesana - 384001, Gujarat</p>
-                        <p class="text-[9px] text-gray-600">GSTIN: 24AAFCS1234A1ZM | +91 9429541601</p>
+                        <p class="text-[9px] text-gray-600">Applied for GST | +91 8469561212</p>
                     </div>
                 </div>
                 <div class="text-right">
@@ -190,7 +190,7 @@ export function generateInvoiceHTML(invoice: any): string {
             <!-- Footer -->
             <div class="text-center pt-1 border-t">
                 <p class="text-[9px] text-gray-500">Thank you for shipping with Shipmitra!</p>
-                <p class="text-[9px] text-gray-400">Track: www.shipmitra.net | Support: +91 9429541601</p>
+                <p class="text-[9px] text-gray-400">Track: www.shipmitra.net | Support: +91 8469561212</p>
             </div>
         </div>
     </div>

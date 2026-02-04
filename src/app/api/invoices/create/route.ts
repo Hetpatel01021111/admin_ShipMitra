@@ -101,8 +101,8 @@ export async function POST(request: NextRequest) {
             // Company info
             companyName: 'Shipmitra Tech Private Limited',
             companyAddress: '13- Janta Super Market, Rajmahel Road, Mahesana Bazar, Mahesana - 384001, Gujarat',
-            companyGstin: '24AAFCS1234A1ZM',
-            companyPhone: '+91 9429541601',
+            companyGstin: 'Applied for GST',
+            companyPhone: '+91 8469561212',
 
             // Status and timestamps
             status: body.status || 'sent',
@@ -135,7 +135,7 @@ export async function POST(request: NextRequest) {
         // Send Email if customer email is provided
         const customerEmail = body.customerEmail || body.email || body.destinationEmail;
         const invoiceUrl = `https://shipmitra-admin.vercel.app/invoice/${docRef.id}`;
-        
+
         if (customerEmail) {
             await sendInvoiceEmail(customerEmail, invoiceUrl, invoiceNumber);
         }

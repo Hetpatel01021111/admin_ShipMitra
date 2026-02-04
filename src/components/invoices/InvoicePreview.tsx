@@ -73,9 +73,9 @@ interface InvoicePreviewProps {
 const COMPANY = {
     name: "Shipmitra Tech Private Limited",
     address: "13- Janta Super Market, Rajmahel Road, Mahesana Bazar, Mahesana - 384001, Gujarat",
-    gstin:"" ,
+    gstin: "Applied for GST",
     email: "ceo@shipmitra.net",
-    phone: "+91 9429541601",
+    phone: "+91 8469561212",
     website: "www.shipmitra.net",
 };
 
@@ -130,7 +130,7 @@ export function InvoicePreview({
                         <div>
                             <h1 className="text-base font-bold text-gray-900">{COMPANY.name}</h1>
                             <p className="text-[9px] text-gray-600">{COMPANY.address}</p>
-                            <p className="text-[9px] text-gray-600">GSTIN: {COMPANY.gstin} | {COMPANY.phone}</p>
+                            <p className="text-[9px] text-gray-600">{COMPANY.gstin} | {COMPANY.phone}</p>
                         </div>
                     </div>
                     <div className="text-right">
@@ -282,10 +282,10 @@ export function InvoicePreview({
                                 <span className="text-gray-600">Payment Mode:</span>
                                 <span
                                     className={`font-medium uppercase ${paymentMode === "prepaid"
-                                            ? "text-green-600"
-                                            : paymentMode === "cod"
-                                                ? "text-orange-600"
-                                                : "text-blue-600"
+                                        ? "text-green-600"
+                                        : paymentMode === "cod"
+                                            ? "text-orange-600"
+                                            : "text-blue-600"
                                         }`}
                                 >
                                     {paymentMode || "Prepaid"}

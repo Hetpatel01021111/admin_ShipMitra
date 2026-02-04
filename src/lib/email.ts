@@ -376,7 +376,7 @@ export const getInvoiceEmailHtml = (invoiceNumber: string, invoiceUrl: string) =
                     <p>Our dedicated support team is here for you 24/7</p>
                     <p style="margin-top: 15px;">
                         <a href="mailto:support@shipmitra.com" class="contact">support@shipmitra.com</a> | 
-                        <span style="color: #8EDDDB; font-weight: 600;">+91 9429541601</span>
+                        <span style="color: #8EDDDB; font-weight: 600;">+91 8469561212</span>
                     </p>
                 </div>
             </div>

@@ -16,6 +16,7 @@ import {
     Search,
     Plus,
     Eye,
+    Pencil,
     Send,
     Printer,
     CheckCircle,
@@ -52,6 +53,7 @@ function InvoicesContent() {
     const [searchQuery, setSearchQuery] = useState("");
     const [statusFilter, setStatusFilter] = useState("all");
     const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+    const [editingInvoice, setEditingInvoice] = useState<Invoice | null>(null);
 
     useEffect(() => {
         loadInvoices();
@@ -93,6 +95,11 @@ function InvoicesContent() {
     // Action handlers
     const handleView = (invoice: Invoice) => {
         window.open(`/invoice/${invoice.id}`, '_blank');
+    };
+
+    const handleEdit = (invoice: Invoice) => {
+        setEditingInvoice(invoice);
+        setIsCreateModalOpen(true);
     };
 
     const handleDownload = (invoice: Invoice) => {
@@ -315,6 +322,9 @@ function InvoicesContent() {
                                                             <Button variant="ghost" size="icon" title="View" onClick={() => handleView(invoice)}>
                                                                 <Eye className="h-4 w-4" />
                                                             </Button>
+                                                            <Button variant="ghost" size="icon" title="Edit" onClick={() => handleEdit(invoice)}>
+                                                                <Pencil className="h-4 w-4" />
+                                                            </Button>
                                                             <Button variant="ghost" size="icon" title="Download" onClick={() => handleDownload(invoice)}>
                                                                 <Download className="h-4 w-4" />
                                                             </Button>
@@ -336,11 +346,15 @@ function InvoicesContent() {
                     </Card>
                 </main>
 
-                {/* Create Invoice Modal */}
+                {/* Create/Edit Invoice Modal */}
                 <CreateInvoiceModal
                     open={isCreateModalOpen}
-                    onOpenChange={setIsCreateModalOpen}
+                    onOpenChange={(open) => {
+                        setIsCreateModalOpen(open);
+                        if (!open) setEditingInvoice(null);
+                    }}
                     onInvoiceCreated={loadInvoices}
+                    editInvoice={editingInvoice}
                 />
             </div>
         </div>

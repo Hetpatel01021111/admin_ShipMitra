@@ -111,8 +111,8 @@ export async function POST(request: NextRequest) {
             // Company info
             companyName: 'Shipmitra Tech Private Limited',
             companyAddress: '13- Janta Super Market, Rajmahel Road, Mahesana Bazar, Mahesana - 384001, Gujarat',
-            companyGstin: '24AAFCS1234A1ZM',
-            companyPhone: '+91 9429541601',
+            companyGstin: 'Applied for GST',
+            companyPhone: '+91 8469561212',
 
             // Booking reference
             bookingId: body.bookingId || body.orderId || '',

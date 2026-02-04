@@ -37,9 +37,9 @@ interface CreateInvoiceModalProps {
 const COMPANY = {
     name: "Shipmitra Tech Private Limited",
     address: "13- Janta Super Market, Rajmahel Road, Mahesana Bazar, Mahesana - 384001, Gujarat",
-    gstin: "24AAFCS1234A1ZM",
+    gstin: "Applied for GST",
     email: "ceo@shipmitra.net",
-    phone: "+91 9429541601",
+    phone: "+91 8469561212",
 };
 
 const CGST_RATE = 0.09;
