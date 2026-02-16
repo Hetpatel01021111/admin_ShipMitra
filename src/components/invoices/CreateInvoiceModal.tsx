@@ -615,7 +615,7 @@ export function CreateInvoiceModal({
                                         ) : (
                                             <>
                                                 <Camera className="mr-2 h-4 w-4" />
-                                                Ai Powered Invoice creation
+                                                Auto-Fill with AI
                                             </>
                                         )}
                                     </Button>
