@@ -13,7 +13,7 @@ import { Label } from "@/components/ui/label";
 import { InvoicePreview } from "./InvoicePreview";
 import { createInvoice, getNextInvoiceNumber, updateInvoice } from "@/lib/data";
 import { generateInvoiceHTML } from "@/lib/invoice-generator";
-import { Plus, Trash2, Download, Save, Loader2, Package, MapPin, Truck } from "lucide-react";
+import { Plus, Trash2, Download, Save, Loader2, Package, MapPin, Truck, Sparkles, Camera } from "lucide-react";
 
 interface PackageDetails {
     id: string;
@@ -75,7 +75,10 @@ export function CreateInvoiceModal({
 }: CreateInvoiceModalProps) {
     const isEditMode = !!editInvoice;
     const [loading, setLoading] = useState(false);
+    const [aiLoading, setAiLoading] = useState(false);
     const [activeTab, setActiveTab] = useState<"origin" | "destination" | "package" | "charges">("origin");
+
+    const fileInputRef = React.useRef<HTMLInputElement>(null);
 
     // Invoice Number (auto-generated)
     const [invoiceNumber, setInvoiceNumber] = useState<string>("");
@@ -321,6 +324,91 @@ export function CreateInvoiceModal({
         }
     };
 
+
+    // AI Invoice Extraction Handler
+    const handleAiExtraction = async (event: React.ChangeEvent<HTMLInputElement>) => {
+        const file = event.target.files?.[0];
+        if (!file) return;
+
+        // Vercel Serverless Function Limit is 4.5MB. We restrict to 4MB to be safe.
+        if (file.size > 4 * 1024 * 1024) {
+            alert("File size too large. Please upload an image smaller than 4MB.");
+            event.target.value = ""; // Reset input
+            return;
+        }
+
+        setAiLoading(true);
+        const formData = new FormData();
+        formData.append('file', file);
+
+        try {
+            const response = await fetch('/api/ai/extract-invoice', {
+                method: 'POST',
+                body: formData,
+            });
+
+            const result = await response.json();
+
+            if (!result.success || !result.data) {
+                throw new Error(result.error || "Failed to extract data");
+            }
+
+            const data = result.data;
+
+            // Auto-fill form fields
+            if (data.invoiceNumber) setInvoiceNumber(data.invoiceNumber);
+
+            // Origin
+            if (data.origin) {
+                if (data.origin.name) setOriginName(data.origin.name);
+                if (data.origin.address) setOriginAddress(data.origin.address);
+                if (data.origin.city) setOriginCity(data.origin.city);
+                if (data.origin.state) setOriginState(data.origin.state);
+                if (data.origin.pincode) setOriginPincode(data.origin.pincode);
+                if (data.origin.phone) setOriginPhone(data.origin.phone);
+                if (data.origin.gstin) setOriginGstin(data.origin.gstin);
+            }
+
+            // Destination
+            if (data.destination) {
+                if (data.destination.name) setDestinationName(data.destination.name);
+                if (data.destination.address) setDestinationAddress(data.destination.address);
+                if (data.destination.city) setDestinationCity(data.destination.city);
+                if (data.destination.state) setDestinationState(data.destination.state);
+                if (data.destination.pincode) setDestinationPincode(data.destination.pincode);
+                if (data.destination.phone) setDestinationPhone(data.destination.phone);
+                if (data.destination.gstin) setDestinationGstin(data.destination.gstin);
+            }
+
+            // Packages
+            if (data.packages && Array.isArray(data.packages) && data.packages.length > 0) {
+                setPackages(data.packages.map((pkg: any, index: number) => ({
+                    id: Date.now().toString() + index,
+                    productName: pkg.productName || pkg.description || "Package",
+                    boxes: pkg.boxes || 1,
+                    quantity: pkg.quantity || 1,
+                    length: pkg.length || 0,
+                    width: pkg.width || 0,
+                    height: pkg.height || 0,
+                    actualWeight: pkg.actualWeight || 0,
+                })));
+            }
+
+            // Declared Value
+            if (data.declaredValue) setDeclaredValue(Number(data.declaredValue));
+
+            alert("Invoice details extracted successfully! Please review and edit if needed.");
+        } catch (error: any) {
+            console.error("AI Extraction Failed:", error);
+            alert("Failed to extract invoice details using AI. Please try again manually.");
+        } finally {
+            setAiLoading(false);
+            if (fileInputRef.current) {
+                fileInputRef.current.value = ""; // Reset input
+            }
+        }
+    };
+
     // Handle form submission
     const handleSubmit = async (saveAsDraft: boolean = false) => {
         setLoading(true);
@@ -492,6 +580,48 @@ export function CreateInvoiceModal({
                                 Invoice #: <span className="font-semibold text-blue-600">{invoiceNumber || "Loading..."}</span>
                             </p>
                         </DialogHeader>
+
+                        {/* AI Extraction Button */}
+                        <div className="mb-6 p-4 bg-gradient-to-r from-purple-50 to-blue-50 border border-purple-100 rounded-xl">
+                            <div className="flex justify-between items-center">
+                                <div>
+                                    <h3 className="font-semibold text-purple-900 flex items-center gap-2">
+                                        <Sparkles className="h-4 w-4 text-purple-600" />
+                                        AI-Powered Auto-Fill
+                                    </h3>
+                                    <p className="text-xs text-purple-600 mt-1">
+                                        Upload an invoice photo to automatically fill details using AI.
+                                    </p>
+                                </div>
+                                <div>
+                                    <input
+                                        type="file"
+                                        ref={fileInputRef}
+                                        className="hidden"
+                                        accept="image/*"
+                                        capture="environment"
+                                        onChange={handleAiExtraction}
+                                    />
+                                    <Button
+                                        onClick={() => fileInputRef.current?.click()}
+                                        disabled={aiLoading}
+                                        className="bg-purple-600 hover:bg-purple-700 text-white shadow-sm"
+                                    >
+                                        {aiLoading ? (
+                                            <>
+                                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                                Analyzing...
+                                            </>
+                                        ) : (
+                                            <>
+                                                <Camera className="mr-2 h-4 w-4" />
+                                                Ai Powered Invoice creation
+                                            </>
+                                        )}
+                                    </Button>
+                                </div>
+                            </div>
+                        </div>
 
                         {/* AWB & Courier */}
                         <div className="grid grid-cols-2 gap-3 mb-4 p-3 bg-blue-50 rounded-lg">
