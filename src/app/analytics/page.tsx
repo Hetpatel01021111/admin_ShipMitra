@@ -67,9 +67,9 @@ function AnalyticsContent() {
             const startDate = new Date();
             startDate.setDate(startDate.getDate() - days);
 
-            // Load all bookings
+            // Load all bookings from unified invoices collection
             const bookingsSnap = await getDocs(
-                query(collection(db, "bookings"), orderBy("createdAt", "desc"))
+                query(collection(db, "invoices"), orderBy("createdAt", "desc"))
             );
 
             const bookings = bookingsSnap.docs.map((doc) => ({
@@ -81,9 +81,9 @@ function AnalyticsContent() {
             // Calculate order stats
             setOrderStats({
                 total: bookings.length,
-                delivered: bookings.filter((b: any) => b.status === "delivered").length,
-                pending: bookings.filter((b: any) => b.status === "pending").length,
-                cancelled: bookings.filter((b: any) => b.status === "cancelled").length,
+                delivered: bookings.filter((b: any) => (b.orderStatus || b.status) === "delivered").length,
+                pending: bookings.filter((b: any) => (b.orderStatus || b.status) === "pending").length,
+                cancelled: bookings.filter((b: any) => (b.orderStatus || b.status) === "cancelled").length,
             });
 
             // Revenue by date
@@ -95,7 +95,7 @@ function AnalyticsContent() {
                     if (!revenueByDate[key]) {
                         revenueByDate[key] = { revenue: 0, orders: 0 };
                     }
-                    revenueByDate[key].revenue += b.amount || 0;
+                    revenueByDate[key].revenue += b.grandTotal || b.amount || 0;
                     revenueByDate[key].orders += 1;
                 }
             });
@@ -110,7 +110,7 @@ function AnalyticsContent() {
             // Courier breakdown
             const courierCount: Record<string, number> = {};
             bookings.forEach((b: any) => {
-                const courier = b.selectedCourier || b.courier || "Unknown";
+                const courier = b.courierPartner || b.selectedCourier || b.courier || "Unknown";
                 courierCount[courier] = (courierCount[courier] || 0) + 1;
             });
             setCourierData(
@@ -120,7 +120,7 @@ function AnalyticsContent() {
             // City breakdown
             const cityCount: Record<string, number> = {};
             bookings.forEach((b: any) => {
-                const city = b.receiverDetails?.city || b.deliveryCity || "Unknown";
+                const city = b.destinationCity || b.receiverDetails?.city || b.deliveryCity || "Unknown";
                 cityCount[city] = (cityCount[city] || 0) + 1;
             });
             setCityData(
@@ -260,18 +260,20 @@ function AnalyticsContent() {
                                                             <stop offset="95%" stopColor="#3B82F6" stopOpacity={0} />
                                                         </linearGradient>
                                                     </defs>
-                                                    <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                                                    <XAxis dataKey="date" tick={{ fontSize: 12 }} />
-                                                    <YAxis tick={{ fontSize: 12 }} />
+                                                    <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" vertical={false} />
+                                                    <XAxis dataKey="date" tick={{ fontSize: 12 }} tickLine={false} axisLine={false} />
+                                                    <YAxis tick={{ fontSize: 12 }} tickLine={false} axisLine={false} />
                                                     <Tooltip
                                                         formatter={(value: number | undefined) => [formatCurrency(value ?? 0), "Revenue"]}
+                                                        contentStyle={{ background: "#fff", border: "none", borderRadius: "8px", boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1)" }}
                                                     />
                                                     <Area
                                                         type="monotone"
                                                         dataKey="revenue"
                                                         stroke="#3B82F6"
                                                         fill="url(#colorRevenue)"
-                                                        strokeWidth={2}
+                                                        strokeWidth={3}
+                                                        activeDot={{ r: 6, fill: "#3B82F6", stroke: "#fff", strokeWidth: 2 }}
                                                     />
                                                 </AreaChart>
                                             </ResponsiveContainer>
@@ -288,10 +290,10 @@ function AnalyticsContent() {
                                         <div className="h-72">
                                             <ResponsiveContainer width="100%" height="100%">
                                                 <BarChart data={revenueData}>
-                                                    <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                                                    <XAxis dataKey="date" tick={{ fontSize: 12 }} />
-                                                    <YAxis tick={{ fontSize: 12 }} />
-                                                    <Tooltip />
+                                                    <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" vertical={false} />
+                                                    <XAxis dataKey="date" tick={{ fontSize: 12 }} tickLine={false} axisLine={false} />
+                                                    <YAxis tick={{ fontSize: 12 }} tickLine={false} axisLine={false} />
+                                                    <Tooltip contentStyle={{ background: "#fff", border: "none", borderRadius: "8px", boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1)" }} />
                                                     <Bar dataKey="orders" fill="#10B981" radius={[4, 4, 0, 0]} />
                                                 </BarChart>
                                             </ResponsiveContainer>
@@ -315,12 +317,14 @@ function AnalyticsContent() {
                                                         data={courierData}
                                                         cx="50%"
                                                         cy="50%"
-                                                        innerRadius={60}
+                                                        innerRadius={65}
                                                         outerRadius={100}
+                                                        paddingAngle={2}
                                                         dataKey="value"
                                                         label={({ name, percent }) =>
                                                             `${name} ${(((percent ?? 0) * 100)).toFixed(0)}%`
                                                         }
+                                                        labelLine={false}
                                                     >
                                                         {courierData.map((_, index) => (
                                                             <Cell
@@ -345,10 +349,10 @@ function AnalyticsContent() {
                                         <div className="h-72">
                                             <ResponsiveContainer width="100%" height="100%">
                                                 <BarChart data={cityData} layout="vertical">
-                                                    <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                                                    <XAxis type="number" tick={{ fontSize: 12 }} />
-                                                    <YAxis dataKey="name" type="category" width={100} tick={{ fontSize: 12 }} />
-                                                    <Tooltip />
+                                                    <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" horizontal={false} />
+                                                    <XAxis type="number" tick={{ fontSize: 12 }} tickLine={false} axisLine={false} />
+                                                    <YAxis dataKey="name" type="category" width={100} tick={{ fontSize: 12 }} tickLine={false} axisLine={false} />
+                                                    <Tooltip contentStyle={{ background: "#fff", border: "none", borderRadius: "8px", boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1)" }} />
                                                     <Bar dataKey="value" fill="#F97316" radius={[0, 4, 4, 0]} />
                                                 </BarChart>
                                             </ResponsiveContainer>

@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ProtectedRoute } from "@/lib/auth";
-import { getInvoices } from "@/lib/data";
+import { getInvoices, deleteInvoice } from "@/lib/data";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import { CreateInvoiceModal } from "@/components/invoices";
 import {
@@ -23,6 +23,7 @@ import {
     Clock,
     XCircle,
     RefreshCw,
+    Trash2,
 } from "lucide-react";
 
 interface Invoice {
@@ -54,6 +55,7 @@ function InvoicesContent() {
     const [statusFilter, setStatusFilter] = useState("all");
     const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
     const [editingInvoice, setEditingInvoice] = useState<Invoice | null>(null);
+    const [deletingId, setDeletingId] = useState<string | null>(null);
 
     useEffect(() => {
         loadInvoices();
@@ -118,6 +120,29 @@ function InvoicesContent() {
     const handleSend = (invoice: Invoice) => {
         // For now, just show a toast - email integration can be added later
         alert(`Send invoice ${invoice.invoiceNumber} - Email integration coming soon!`);
+    };
+
+    const handleDelete = async (invoice: Invoice) => {
+        const confirmed = window.confirm(
+            `Are you sure you want to delete invoice ${invoice.invoiceNumber}? This will also remove related bookings and cannot be undone.`
+        );
+        if (!confirmed) return;
+
+        setDeletingId(invoice.id);
+        try {
+            const success = await deleteInvoice(invoice.id);
+            if (success) {
+                // Optimistically remove from local state
+                setInvoices((prev) => prev.filter((inv) => inv.id !== invoice.id));
+            } else {
+                alert("Failed to delete invoice. Please try again.");
+            }
+        } catch (error) {
+            console.error("Error deleting invoice:", error);
+            alert("Something went wrong while deleting the invoice.");
+        } finally {
+            setDeletingId(null);
+        }
     };
 
     const getStatusBadge = (status: string) => {
@@ -205,16 +230,16 @@ function InvoicesContent() {
 
                     {/* Revenue Stats */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-                        <Card className="bg-gradient-to-r from-green-500 to-green-600 text-white">
+                        <Card className="glass-card">
                             <CardContent className="p-6">
-                                <p className="text-green-100">Total Collected</p>
-                                <p className="text-3xl font-bold">{formatCurrency(stats.paidAmount)}</p>
+                                <p className="text-gray-500 font-medium">Total Collected</p>
+                                <p className="text-3xl font-bold font-mono text-emerald-600">{formatCurrency(stats.paidAmount)}</p>
                             </CardContent>
                         </Card>
-                        <Card className="bg-gradient-to-r from-blue-500 to-blue-600 text-white">
+                        <Card className="glass-card">
                             <CardContent className="p-6">
-                                <p className="text-blue-100">Total Invoiced</p>
-                                <p className="text-3xl font-bold">{formatCurrency(stats.totalAmount)}</p>
+                                <p className="text-gray-500 font-medium">Total Invoiced</p>
+                                <p className="text-3xl font-bold font-mono text-blue-600">{formatCurrency(stats.totalAmount)}</p>
                             </CardContent>
                         </Card>
                     </div>
@@ -333,6 +358,15 @@ function InvoicesContent() {
                                                             </Button>
                                                             <Button variant="ghost" size="icon" title="Print" onClick={() => handlePrint(invoice)}>
                                                                 <Printer className="h-4 w-4" />
+                                                            </Button>
+                                                            <Button
+                                                                variant="ghost"
+                                                                size="icon"
+                                                                title="Delete"
+                                                                onClick={() => handleDelete(invoice)}
+                                                                disabled={deletingId === invoice.id}
+                                                            >
+                                                                <Trash2 className="h-4 w-4 text-red-600" />
                                                             </Button>
                                                         </div>
                                                     </td>

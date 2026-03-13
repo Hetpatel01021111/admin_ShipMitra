@@ -6,8 +6,15 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Checkbox } from "@/components/ui/checkbox";
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { ProtectedRoute } from "@/lib/auth";
-import { subscribeToOrders } from "@/lib/data";
+import { subscribeToOrders, updateOrderStatus } from "@/lib/data";
 import { formatCurrency, formatDate, getStatusColor, getStatusLabel } from "@/lib/utils";
 import { Order } from "@/types";
 import {
@@ -21,10 +28,14 @@ import {
     XCircle,
     X,
     CircleDot,
+    MoreHorizontal,
+    Edit2,
 } from "lucide-react";
 import Link from "next/link";
 import { ExportDialog } from "@/components/orders/export-dialog";
 import { OrderActionsMenu } from "@/components/orders/order-actions-menu";
+
+import { useRouter, useSearchParams } from "next/navigation";
 
 const statusFilters = [
     { value: "all", label: "All", icon: CircleDot, color: "text-gray-600" },
@@ -35,12 +46,36 @@ const statusFilters = [
 ];
 
 function OrdersContent() {
+    const router = useRouter();
+    const searchParams = useSearchParams();
+
     const [orders, setOrders] = useState<Order[]>([]);
     const [searchQuery, setSearchQuery] = useState("");
-    const [statusFilter, setStatusFilter] = useState("all");
+
+    // Initialize status from URL, default to 'all'
+    const statusQuery = searchParams.get("status");
+    const [statusFilter, setStatusFilter] = useState(statusQuery || "all");
+
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
+    const [updatingBulk, setUpdatingBulk] = useState(false);
+    const [selectedOrders, setSelectedOrders] = useState<string[]>([]);
     const [lastUpdated, setLastUpdated] = useState<Date>(new Date());
+
+    useEffect(() => {
+        // Update state if URL changes externally (e.g., clicking sidebar links)
+        const status = searchParams.get("status");
+        setStatusFilter(status || "all");
+    }, [searchParams]);
+
+    const handleStatusTabChange = (value: string) => {
+        setStatusFilter(value);
+        if (value === "all") {
+            router.push("/orders");
+        } else {
+            router.push(`/orders?status=${value}`);
+        }
+    };
 
     useEffect(() => {
         const unsubscribe = subscribeToOrders((data) => {
@@ -68,14 +103,57 @@ function OrdersContent() {
                 order.customerPhone?.includes(searchQuery) ||
                 order.awbNumber?.toLowerCase().includes(searchQuery.toLowerCase()) ||
                 order.delivery?.city?.toLowerCase().includes(searchQuery.toLowerCase());
-            const matchesStatus = statusFilter === "all" || order.status === statusFilter;
-            return matchesSearch && matchesStatus;
+
+            // "All" tab should not show delivered or cancelled orders
+            if (statusFilter === "all") {
+                return matchesSearch && order.status !== "delivered" && order.status !== "cancelled";
+            }
+
+            return matchesSearch && order.status === statusFilter;
         });
     }, [orders, searchQuery, statusFilter]);
 
+    const handleSelectAll = (checked: boolean) => {
+        if (checked) {
+            setSelectedOrders(filteredOrders.map(order => order.id));
+        } else {
+            setSelectedOrders([]);
+        }
+    };
+
+    const handleSelectOrder = (orderId: string, checked: boolean) => {
+        if (checked) {
+            setSelectedOrders(prev => [...prev, orderId]);
+        } else {
+            setSelectedOrders(prev => prev.filter(id => id !== orderId));
+        }
+    };
+
+    const handleBulkStatusChange = async (newStatus: string) => {
+        if (selectedOrders.length === 0) return;
+
+        setUpdatingBulk(true);
+        try {
+            const promises = selectedOrders.map(id => updateOrderStatus(id, newStatus));
+            const results = await Promise.all(promises);
+            const failedResults = results.filter(res => !res.success);
+
+            if (failedResults.length > 0) {
+                alert(`Failed to update ${failedResults.length} orders. Last error: ${failedResults[0].error}`);
+            } else {
+                setSelectedOrders([]);
+            }
+        } catch (error) {
+            console.error("Error bulk updating orders:", error);
+            alert("Failed to execute bulk update. Please try again.");
+        } finally {
+            setUpdatingBulk(false);
+        }
+    };
+
     // Stats with counts for each status
     const stats = useMemo(() => ({
-        all: orders.length,
+        all: orders.filter((o) => o.status !== "delivered" && o.status !== "cancelled").length,
         pending: orders.filter((o) => o.status === "pending").length,
         in_transit: orders.filter((o) => o.status === "in_transit" || o.status === "picked_up" || o.status === "pickup_scheduled").length,
         delivered: orders.filter((o) => o.status === "delivered").length,
@@ -100,6 +178,30 @@ function OrdersContent() {
                                 </p>
                             </div>
                             <div className="flex items-center gap-2">
+                                {selectedOrders.length > 0 && (
+                                    <DropdownMenu>
+                                        <DropdownMenuTrigger asChild>
+                                            <Button variant="secondary" className="gap-2 bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100">
+                                                <Edit2 className="h-4 w-4" />
+                                                Bulk Actions ({selectedOrders.length})
+                                            </Button>
+                                        </DropdownMenuTrigger>
+                                        <DropdownMenuContent align="end">
+                                            <div className="px-2 py-1.5 text-xs font-semibold text-gray-500">
+                                                Change Status To:
+                                            </div>
+                                            <DropdownMenuItem onClick={() => handleBulkStatusChange('pending')} disabled={updatingBulk}>
+                                                <Clock className="h-4 w-4 mr-2" /> Pending
+                                            </DropdownMenuItem>
+                                            <DropdownMenuItem onClick={() => handleBulkStatusChange('in_transit')} disabled={updatingBulk}>
+                                                <Truck className="h-4 w-4 mr-2" /> In Transit
+                                            </DropdownMenuItem>
+                                            <DropdownMenuItem onClick={() => handleBulkStatusChange('delivered')} disabled={updatingBulk} className="text-green-600">
+                                                <CheckCircle className="h-4 w-4 mr-2" /> Delivered
+                                            </DropdownMenuItem>
+                                        </DropdownMenuContent>
+                                    </DropdownMenu>
+                                )}
                                 <ExportDialog orders={orders} filteredOrders={filteredOrders} />
                                 <Button
                                     variant="outline"
@@ -128,7 +230,7 @@ function OrdersContent() {
                                 return (
                                     <button
                                         key={filter.value}
-                                        onClick={() => setStatusFilter(filter.value)}
+                                        onClick={() => handleStatusTabChange(filter.value)}
                                         className={`flex items-center gap-2 px-4 py-2.5 rounded-lg border-2 transition-all whitespace-nowrap ${isActive
                                             ? "bg-blue-50 border-blue-600 text-blue-700"
                                             : "bg-white border-gray-200 text-gray-600 hover:border-gray-300 hover:bg-gray-50"
@@ -192,6 +294,13 @@ function OrdersContent() {
                                     <table className="w-full">
                                         <thead className="bg-gray-50 border-b">
                                             <tr>
+                                                <th className="px-6 py-4 text-left w-12">
+                                                    <Checkbox
+                                                        checked={filteredOrders.length > 0 && selectedOrders.length === filteredOrders.length}
+                                                        onCheckedChange={handleSelectAll}
+                                                        aria-label="Select all orders"
+                                                    />
+                                                </th>
                                                 <th className="text-left px-6 py-4 text-xs font-semibold text-gray-600 uppercase tracking-wider">
                                                     Order ID
                                                 </th>
@@ -220,7 +329,14 @@ function OrdersContent() {
                                         </thead>
                                         <tbody className="divide-y divide-gray-100">
                                             {filteredOrders.map((order) => (
-                                                <tr key={order.id} className="hover:bg-gray-50 transition-colors">
+                                                <tr key={order.id} className={`hover:bg-gray-50 transition-colors ${selectedOrders.includes(order.id) ? 'bg-blue-50/50' : ''}`}>
+                                                    <td className="px-6 py-4">
+                                                        <Checkbox
+                                                            checked={selectedOrders.includes(order.id)}
+                                                            onCheckedChange={(checked) => handleSelectOrder(order.id, checked as boolean)}
+                                                            aria-label={`Select order ${order.id}`}
+                                                        />
+                                                    </td>
                                                     <td className="px-6 py-4">
                                                         <div className="font-semibold text-blue-600 text-sm">{order.id}</div>
                                                         {order.awbNumber && (

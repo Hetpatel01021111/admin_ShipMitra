@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -15,6 +15,17 @@ import {
     X,
     ChevronRight,
 } from "lucide-react";
+import {
+    collection,
+    query,
+    orderBy,
+    onSnapshot,
+    where,
+    doc,
+    updateDoc,
+    deleteDoc,
+} from "firebase/firestore";
+import { db } from "@/lib/firebase";
 
 interface Notification {
     id: string;
@@ -25,51 +36,6 @@ interface Notification {
     isRead: boolean;
     link?: string;
 }
-
-const mockNotifications: Notification[] = [
-    {
-        id: "1",
-        type: "order",
-        title: "New Order Received",
-        message: "Order #ORD-2026-001250 from Ramesh Patel",
-        timestamp: new Date(Date.now() - 5 * 60 * 1000),
-        isRead: false,
-        link: "/orders/ORD-2026-001250",
-    },
-    {
-        id: "2",
-        type: "payment",
-        title: "Payment Confirmed",
-        message: "₹285 received for order #ORD-2026-001249",
-        timestamp: new Date(Date.now() - 15 * 60 * 1000),
-        isRead: false,
-        link: "/orders/ORD-2026-001249",
-    },
-    {
-        id: "3",
-        type: "rider",
-        title: "Pickup Completed",
-        message: "Mahesh Kumar picked up order #ORD-2026-001245",
-        timestamp: new Date(Date.now() - 30 * 60 * 1000),
-        isRead: true,
-    },
-    {
-        id: "4",
-        type: "customer",
-        title: "New Customer Registered",
-        message: "Priya Shah joined via referral",
-        timestamp: new Date(Date.now() - 60 * 60 * 1000),
-        isRead: true,
-    },
-    {
-        id: "5",
-        type: "system",
-        title: "Daily Report Ready",
-        message: "January 6, 2026 sales report is ready",
-        timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000),
-        isRead: true,
-    },
-];
 
 const getNotificationIcon = (type: string) => {
     switch (type) {
@@ -92,22 +58,64 @@ interface NotificationCenterProps {
 }
 
 export function NotificationCenter({ isOpen, onClose }: NotificationCenterProps) {
-    const [notifications, setNotifications] = useState<Notification[]>(mockNotifications);
+    const [notifications, setNotifications] = useState<Notification[]>([]);
+
+    useEffect(() => {
+        if (!isOpen) return;
+
+        const q = query(
+            collection(db, "notifications"),
+            orderBy("createdAt", "desc")
+        );
+
+        const unsubscribe = onSnapshot(q, (snapshot) => {
+            const items: Notification[] = snapshot.docs.map((docSnap) => {
+                const data = docSnap.data() as any;
+                return {
+                    id: docSnap.id,
+                    type: (data.type as Notification["type"]) || "system",
+                    title: data.title || "",
+                    message: data.message || "",
+                    timestamp: data.createdAt?.toDate?.() || new Date(),
+                    isRead: !!data.isRead,
+                    link: data.link || undefined,
+                };
+            });
+            setNotifications(items);
+        });
+
+        return () => unsubscribe();
+    }, [isOpen]);
 
     const unreadCount = notifications.filter((n) => !n.isRead).length;
 
-    const markAsRead = (id: string) => {
-        setNotifications((prev) =>
-            prev.map((n) => (n.id === id ? { ...n, isRead: true } : n))
-        );
+    const markAsRead = async (id: string) => {
+        try {
+            await updateDoc(doc(db, "notifications", id), { isRead: true });
+        } catch (error) {
+            console.error("Error marking notification as read:", error);
+        }
     };
 
-    const markAllAsRead = () => {
-        setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
+    const markAllAsRead = async () => {
+        try {
+            const unread = notifications.filter((n) => !n.isRead);
+            await Promise.all(
+                unread.map((n) =>
+                    updateDoc(doc(db, "notifications", n.id), { isRead: true })
+                )
+            );
+        } catch (error) {
+            console.error("Error marking all notifications as read:", error);
+        }
     };
 
-    const deleteNotification = (id: string) => {
-        setNotifications((prev) => prev.filter((n) => n.id !== id));
+    const deleteNotification = async (id: string) => {
+        try {
+            await deleteDoc(doc(db, "notifications", id));
+        } catch (error) {
+            console.error("Error deleting notification:", error);
+        }
     };
 
     if (!isOpen) return null;
@@ -202,7 +210,20 @@ export function NotificationCenter({ isOpen, onClose }: NotificationCenterProps)
 // Notification badge for header
 export function NotificationBadge() {
     const [isOpen, setIsOpen] = useState(false);
-    const unreadCount = 2; // Replace with real count
+    const [unreadCount, setUnreadCount] = useState(0);
+
+    useEffect(() => {
+        const q = query(
+            collection(db, "notifications"),
+            where("isRead", "==", false)
+        );
+
+        const unsubscribe = onSnapshot(q, (snapshot) => {
+            setUnreadCount(snapshot.size);
+        });
+
+        return () => unsubscribe();
+    }, []);
 
     return (
         <>

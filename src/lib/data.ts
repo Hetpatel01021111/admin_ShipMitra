@@ -112,15 +112,17 @@ export const updateOrderStatus = async (
     status: string,
     updatedBy: string = 'admin',
     note?: string
-): Promise<boolean> => {
+): Promise<{ success: boolean; error?: string }> => {
     try {
         const docRef = doc(db, 'invoices', orderId);
         const docSnap = await getDoc(docRef);
 
-        if (!docSnap.exists()) return false;
+        if (!docSnap.exists()) {
+            return { success: false, error: "Order not found" };
+        }
 
         const currentData = docSnap.data();
-        const statusHistory = currentData.statusHistory || [];
+        const statusHistory = Array.isArray(currentData.statusHistory) ? currentData.statusHistory : [];
 
         await updateDoc(docRef, {
             orderStatus: status, // Use orderStatus to differentiate from invoice status
@@ -135,10 +137,46 @@ export const updateOrderStatus = async (
                 },
             ],
         });
-        return true;
-    } catch (error) {
+
+        // Try to keep related booking records in sync, but don't fail the whole operation if it fails
+        try {
+            const bookingsSnapshot = await getDocs(
+                query(
+                    collection(db, 'bookings'),
+                    where('invoiceId', '==', orderId)
+                )
+            );
+
+            if (!bookingsSnapshot.empty) {
+                const batch = writeBatch(db);
+                bookingsSnapshot.docs.forEach((bookingDoc) => {
+                    const bookingData = bookingDoc.data();
+                    const bookingHistory = Array.isArray(bookingData.statusHistory) ? bookingData.statusHistory : [];
+
+                    batch.update(bookingDoc.ref, {
+                        status,
+                        updatedAt: serverTimestamp(),
+                        statusHistory: [
+                            ...bookingHistory,
+                            {
+                                status,
+                                timestamp: new Date(),
+                                updatedBy,
+                                note: note || '',
+                            },
+                        ],
+                    });
+                });
+                await batch.commit();
+            }
+        } catch (bookingError) {
+            console.warn('Could not sync booking status (non-fatal):', bookingError);
+        }
+
+        return { success: true };
+    } catch (error: any) {
         console.error('Error updating order status:', error);
-        return false;
+        return { success: false, error: error.message || "Unknown error occurred" };
     }
 };
 
@@ -362,33 +400,91 @@ export const updateCustomerWallet = async (customerId: string, amount: number): 
 
 // ============ DASHBOARD METRICS ============
 
-export const getDashboardMetrics = async (): Promise<DashboardMetrics | null> => {
+export const getDashboardMetrics = async (
+    customStartDate?: Date,
+    customEndDate?: Date
+): Promise<DashboardMetrics | null> => {
     try {
         const today = new Date();
         today.setHours(0, 0, 0, 0);
 
-        // Get all orders
-        const ordersSnapshot = await getDocs(collection(db, 'bookings'));
+        // Determine the 'current' period and the 'previous' period for comparison
+        let periodStart = new Date(today);
+        let periodEnd = new Date();
+        let prevPeriodStart = new Date(today);
+        let prevPeriodEnd = new Date(today);
+
+        if (customStartDate && customEndDate) {
+            // If custom range is provided
+            periodStart = new Date(customStartDate);
+            periodStart.setHours(0, 0, 0, 0);
+
+            periodEnd = new Date(customEndDate);
+            periodEnd.setHours(23, 59, 59, 999);
+
+            const durationMs = periodEnd.getTime() - periodStart.getTime();
+
+            prevPeriodEnd = new Date(periodStart);
+            prevPeriodEnd.setMilliseconds(prevPeriodEnd.getMilliseconds() - 1); // Day before periodStart
+
+            prevPeriodStart = new Date(periodStart.getTime() - durationMs);
+            prevPeriodStart.setHours(0, 0, 0, 0);
+        } else {
+            // Default 7 days logic
+            periodStart.setDate(today.getDate() - 6); // Includes today + 6 prev days = 7 days
+            periodStart.setHours(0, 0, 0, 0);
+
+            periodEnd = new Date();
+
+            prevPeriodStart.setDate(periodStart.getDate() - 7);
+            prevPeriodEnd.setDate(periodStart.getDate() - 1);
+            prevPeriodEnd.setHours(23, 59, 59, 999);
+        }
+
+        // Get all orders from invoices as the unified source of truth
+        const ordersSnapshot = await getDocs(collection(db, 'invoices'));
         const orders = ordersSnapshot.docs.map((doc) => {
             const data = doc.data();
             const createdAt = data.createdAt?.toDate?.() || (data.createdAt ? new Date(data.createdAt) : new Date());
             return {
                 ...data,
+                amount: data.grandTotal || data.amount || 0,
+                status: data.orderStatus || data.status || 'pending',
                 createdAt,
             };
         }) as unknown as Order[];
 
-        // Calculate metrics
-        const todayOrders = orders.filter((o) => {
+        // Calculate metrics for the active period
+        const periodOrders = orders.filter((o) => {
             const createdAt = o.createdAt instanceof Date ? o.createdAt : new Date(o.createdAt as any);
-            return createdAt >= today;
+            return createdAt >= periodStart && createdAt <= periodEnd;
         });
 
         const pendingOrders = orders.filter((o) => o.status === 'pending');
         const deliveredOrders = orders.filter((o) => o.status === 'delivered');
 
-        const todayRevenue = todayOrders.reduce((sum, o) => sum + (o.amount || 0), 0);
+        const periodRevenue = periodOrders.reduce((sum, o) => sum + (o.amount || 0), 0);
         const totalRevenue = orders.reduce((sum, o) => sum + (o.amount || 0), 0);
+        const periodPending = periodOrders.filter((o) => o.status === 'pending').length;
+
+        // Previous period for comparison
+        const prevPeriodOrders = orders.filter((o) => {
+            const createdAt = o.createdAt instanceof Date ? o.createdAt : new Date(o.createdAt as any);
+            return createdAt >= prevPeriodStart && createdAt <= prevPeriodEnd;
+        });
+
+        const prevPeriodRevenue = prevPeriodOrders.reduce((sum, o) => sum + (o.amount || 0), 0);
+        const prevPeriodPending = prevPeriodOrders.filter((o) => o.status === 'pending').length;
+
+        const percentChange = (current: number, previous: number): string => {
+            if (previous === 0) {
+                if (current === 0) return '0%';
+                return '+100%';
+            }
+            const diff = ((current - previous) / previous) * 100;
+            const sign = diff > 0 ? '+' : '';
+            return `${sign}${diff.toFixed(1)}%`;
+        };
 
         // Get active riders
         const ridersSnapshot = await getDocs(
@@ -400,17 +496,17 @@ export const getDashboardMetrics = async (): Promise<DashboardMetrics | null> =>
 
         return {
             totalOrders: orders.length,
-            todayOrders: todayOrders.length,
+            todayOrders: periodOrders.length, // Displaying Period Orders here
             pendingOrders: pendingOrders.length,
             deliveredOrders: deliveredOrders.length,
-            todayRevenue,
+            todayRevenue: periodRevenue, // Displaying Period Revenue here
             totalRevenue,
             activeRiders: ridersSnapshot.size,
             totalCustomers: customersSnapshot.size,
-            ordersChange: '+12%',
-            revenueChange: '+18.5%',
-            ridersChange: '+2',
-            pendingChange: '-5%',
+            ordersChange: percentChange(periodOrders.length, prevPeriodOrders.length),
+            revenueChange: percentChange(periodRevenue, prevPeriodRevenue),
+            ridersChange: '0%', // Not historically tracked
+            pendingChange: percentChange(periodPending, prevPeriodPending),
         };
     } catch (error) {
         console.error('Error fetching dashboard metrics:', error);
@@ -419,12 +515,15 @@ export const getDashboardMetrics = async (): Promise<DashboardMetrics | null> =>
 };
 
 // Real-time dashboard metrics
-export const subscribeToDashboardMetrics = (callback: (metrics: DashboardMetrics | null) => void) => {
-    // Subscribe to orders for real-time updates
+export const subscribeToDashboardMetrics = (
+    callback: (metrics: DashboardMetrics | null) => void,
+    filters?: { startDate?: Date; endDate?: Date }
+) => {
+    // Subscribe to invoices for real-time updates
     return onSnapshot(
-        query(collection(db, 'bookings'), orderBy('createdAt', 'desc'), limit(500)),
+        query(collection(db, 'invoices'), orderBy('createdAt', 'desc'), limit(500)),
         async () => {
-            const metrics = await getDashboardMetrics();
+            const metrics = await getDashboardMetrics(filters?.startDate, filters?.endDate);
             callback(metrics);
         },
         (error) => {
@@ -507,6 +606,61 @@ export const createInvoice = async (invoiceData: any): Promise<string | null> =>
             updatedAt: serverTimestamp(),
         });
 
+        // Also create a corresponding booking record so dashboard/reporting works for admin-created invoices
+        try {
+            const bookingData = {
+                // Basic info
+                awbNumber: invoiceData.awbNumber || invoiceNumber,
+                courierPartner: invoiceData.courierPartner || '',
+
+                // Sender (pickup) info
+                senderName: invoiceData.originName || '',
+                senderPhone: invoiceData.originPhone || '',
+                senderAddress: invoiceData.originAddress || '',
+                senderCity: invoiceData.originCity || '',
+                senderState: invoiceData.originState || '',
+                senderPincode: invoiceData.originPincode || '',
+
+                // Receiver (delivery) info
+                receiverName: invoiceData.destinationName || '',
+                receiverPhone: invoiceData.destinationPhone || '',
+                receiverAddress: invoiceData.destinationAddress || '',
+                receiverCity: invoiceData.destinationCity || '',
+                receiverState: invoiceData.destinationState || '',
+                receiverPincode: invoiceData.destinationPincode || '',
+
+                // Package info
+                weight:
+                    Array.isArray(invoiceData.packages) && invoiceData.packages.length > 0
+                        ? (invoiceData.packages[0].actualWeight || 0)
+                        : invoiceData.weight || 0,
+                packages: invoiceData.packages || [],
+                declaredValue: invoiceData.declaredValue || 0,
+
+                // Payment
+                paymentMode: invoiceData.paymentMode || 'prepaid',
+                codAmount: invoiceData.codAmount || 0,
+                amount: invoiceData.grandTotal ?? invoiceData.subtotal ?? 0,
+
+                // Status
+                status: 'pending',
+
+                // References
+                invoiceId: docRef.id,
+                invoiceNumber,
+
+                // Metadata
+                source: invoiceData.source || 'admin',
+                createdAt: serverTimestamp(),
+                updatedAt: serverTimestamp(),
+            };
+
+            await addDoc(collection(db, 'bookings'), bookingData);
+        } catch (bookingError) {
+            console.error('Error creating booking for invoice:', bookingError);
+            // Do not fail invoice creation if booking creation fails
+        }
+
         return docRef.id;
     } catch (error) {
         console.error('Error creating invoice:', error);
@@ -548,6 +702,35 @@ export const updateInvoice = async (
         return true;
     } catch (error) {
         console.error('Error updating invoice:', error);
+        return false;
+    }
+};
+
+export const deleteInvoice = async (invoiceId: string): Promise<boolean> => {
+    try {
+        // Delete the invoice document itself
+        const invoiceRef = doc(db, 'invoices', invoiceId);
+        await deleteDoc(invoiceRef);
+
+        // Clean up any related booking records that reference this invoice
+        const bookingsSnapshot = await getDocs(
+            query(
+                collection(db, 'bookings'),
+                where('invoiceId', '==', invoiceId)
+            )
+        );
+
+        if (!bookingsSnapshot.empty) {
+            const batch = writeBatch(db);
+            bookingsSnapshot.docs.forEach((bookingDoc) => {
+                batch.delete(bookingDoc.ref);
+            });
+            await batch.commit();
+        }
+
+        return true;
+    } catch (error) {
+        console.error('Error deleting invoice:', error);
         return false;
     }
 };
@@ -607,7 +790,7 @@ export const getRevenueData = async (days: number = 7) => {
 
 export const getOrderStatusCounts = async () => {
     try {
-        const snapshot = await getDocs(collection(db, 'bookings'));
+        const snapshot = await getDocs(collection(db, 'invoices'));
 
         const statusCounts: Record<string, number> = {
             pending: 0,
@@ -619,9 +802,12 @@ export const getOrderStatusCounts = async () => {
         };
 
         snapshot.docs.forEach((doc) => {
-            const status = doc.data().status || 'pending';
+            const data = doc.data();
+            const status = data.orderStatus || data.status || 'pending';
             if (statusCounts[status] !== undefined) {
                 statusCounts[status]++;
+            } else {
+                statusCounts[status] = 1;
             }
         });
 

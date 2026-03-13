@@ -21,6 +21,9 @@ import {
     MoreVertical,
     Edit,
     XCircle,
+    CheckCircle,
+    Truck,
+    Clock,
     Printer,
     MapPin,
     FileText,
@@ -42,12 +45,32 @@ export function OrderActionsMenu({ order }: OrderActionsMenuProps) {
     const handleCancelOrder = async () => {
         setCancelling(true);
         try {
-            await updateOrderStatus(order.id, "cancelled");
+            const result = await updateOrderStatus(order.id, "cancelled");
             setCancelDialogOpen(false);
+            if (result.success) {
+                // window.location.reload(); // Removed to allow onSnapshot to update seamlessly
+            } else {
+                alert(`Failed to cancel order: ${result.error || 'Check console for details.'}`);
+            }
         } catch (error) {
             console.error("Error cancelling order:", error);
         } finally {
             setCancelling(false);
+        }
+    };
+
+    const handleUpdateStatus = async (status: string) => {
+        try {
+            const result = await updateOrderStatus(order.id, status);
+            if (result.success) {
+                // Refresh to get new data
+                // window.location.reload(); // Removed to allow onSnapshot to update seamlessly
+            } else {
+                alert(`Failed to update status: ${result.error || 'Check console for details.'}`);
+            }
+        } catch (error) {
+            console.error("Error updating order status:", error);
+            alert("Failed to update status");
         }
     };
 
@@ -128,12 +151,30 @@ export function OrderActionsMenu({ order }: OrderActionsMenuProps) {
                         Download Invoice
                     </DropdownMenuItem>
 
+                    <DropdownMenuSeparator />
+                    <div className="px-2 py-1.5 text-xs font-semibold text-gray-500">
+                        Update Status
+                    </div>
+
+                    <DropdownMenuItem onClick={() => handleUpdateStatus('pending')} disabled={order.status === 'pending' || order.status === 'cancelled' || order.status === 'delivered'}>
+                        <Clock className="h-4 w-4 mr-2" />
+                        Pending
+                    </DropdownMenuItem>
+
+                    <DropdownMenuItem onClick={() => handleUpdateStatus('in_transit')} disabled={order.status === 'in_transit' || order.status === 'cancelled' || order.status === 'delivered'}>
+                        <Truck className="h-4 w-4 mr-2 text-blue-600" />
+                        In Transit
+                    </DropdownMenuItem>
+
+                    <DropdownMenuItem onClick={() => handleUpdateStatus('delivered')} disabled={order.status === 'delivered' || order.status === 'cancelled'} className="text-green-600">
+                        <CheckCircle className="h-4 w-4 mr-2" />
+                        Delivered
+                    </DropdownMenuItem>
+
                     <DropdownMenuItem onClick={handleSendWhatsApp}>
                         <MessageSquare className="h-4 w-4 mr-2" />
                         Send WhatsApp
                     </DropdownMenuItem>
-
-                    <DropdownMenuSeparator />
 
                     <DropdownMenuItem
                         onClick={() => setCancelDialogOpen(true)}

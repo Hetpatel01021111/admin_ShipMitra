@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/lib/firebase';
-import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { adminDb } from '@/lib/firebase-admin';
+import { FieldValue } from 'firebase-admin/firestore';
 import { randomUUID } from 'crypto';
 import { sendInvoiceEmail } from '@/lib/email';
 
-// Secure API Key - Store in environment variable in production
+// Secure API Key - matches the key used by shipmitra.net proxy
 const API_KEY = process.env.SHIPMITRA_API_KEY || 'sm_live_sk_shipmitra2026_secure_key';
 
 // CORS headers for external access
@@ -46,7 +46,35 @@ export async function POST(request: NextRequest) {
         const year = new Date().getFullYear();
         const invoiceNumber = `SM/${year}/${randomUUID().replace(/-/g, '').slice(0, 8).toUpperCase()}`;
 
-        // Prepare invoice data
+        // Build charges object from flat or nested body
+        const charges = {
+            freight: Number(body.freight || body.charges?.freight || 0),
+            fuelSurcharge: Number(body.fuelSurcharge || body.charges?.fuelSurcharge || 0),
+            awbFee: Number(body.awbFee || body.charges?.awbFee || 0),
+            odaCharge: Number(body.odaCharge || body.charges?.odaCharge || 0),
+            codCharge: Number(body.codCharge || body.charges?.codCharge || 0),
+            handlingCharge: Number(body.handlingCharge || body.charges?.handlingCharge || 0),
+            insuranceCharge: Number(body.insuranceCharge || body.charges?.insuranceCharge || 0),
+            otherCharges: Number(body.otherCharges || body.charges?.otherCharges || 0),
+        };
+
+        // Calculate totals — include GST fields passed from client if available
+        const subtotal =
+            charges.freight +
+            charges.fuelSurcharge +
+            charges.awbFee +
+            charges.odaCharge +
+            charges.codCharge +
+            charges.handlingCharge +
+            charges.insuranceCharge +
+            charges.otherCharges;
+
+        // Use client-supplied GST if present (they already computed it), else compute
+        const cgst = Number(body.cgst ?? (subtotal * 0.09));
+        const sgst = Number(body.sgst ?? (subtotal * 0.09));
+        const grandTotal = Math.round(subtotal + cgst + sgst);
+
+        // Prepare invoice data for Firestore
         const invoiceData = {
             invoiceNumber,
             invoiceDate: new Date().toISOString(),
@@ -73,30 +101,21 @@ export async function POST(request: NextRequest) {
 
             // Packages
             packages: body.packages || [],
-            declaredValue: body.declaredValue || 0,
+            declaredValue: Number(body.declaredValue || 0),
 
             // Payment
             paymentMode: body.paymentMode || 'prepaid',
-            codAmount: body.codAmount || 0,
+            codAmount: Number(body.codAmount || 0),
 
-            // Charges
-            charges: {
-                freight: body.freight || body.charges?.freight || 0,
-                fuelSurcharge: body.fuelSurcharge || body.charges?.fuelSurcharge || 0,
-                awbFee: body.awbFee || body.charges?.awbFee || 0,
-                odaCharge: body.odaCharge || body.charges?.odaCharge || 0,
-                codCharge: body.codCharge || body.charges?.codCharge || 0,
-                handlingCharge: body.handlingCharge || body.charges?.handlingCharge || 0,
-                insuranceCharge: body.insuranceCharge || body.charges?.insuranceCharge || 0,
-                otherCharges: body.otherCharges || body.charges?.otherCharges || 0,
-            },
+            // Charges (flat for easy querying)
+            charges,
 
-            // Calculate totals (placeholders, will be updated below)
-            subtotal: 0,
-            cgst: 0,
-            sgst: 0,
+            // Totals
+            subtotal,
+            cgst,
+            sgst,
             igst: 0,
-            grandTotal: 0,
+            grandTotal,
 
             // Company info
             companyName: 'Shipmitra Tech Private Limited',
@@ -107,40 +126,27 @@ export async function POST(request: NextRequest) {
             // Status and timestamps
             status: body.status || 'sent',
             source: 'api', // Mark as created via API
-            createdAt: serverTimestamp(),
-            updatedAt: serverTimestamp(),
+            createdAt: FieldValue.serverTimestamp(),
+            updatedAt: FieldValue.serverTimestamp(),
         };
 
-        // Calculate totals
-        const charges = invoiceData.charges;
-        invoiceData.subtotal =
-            Number(charges.freight) +
-            Number(charges.fuelSurcharge) +
-            Number(charges.awbFee) +
-            Number(charges.odaCharge) +
-            Number(charges.codCharge) +
-            Number(charges.handlingCharge) +
-            Number(charges.insuranceCharge) +
-            Number(charges.otherCharges);
+        // Save to Firestore using Admin SDK (server-safe, no auth required)
+        const docRef = await adminDb.collection('invoices').add(invoiceData);
 
-        // Simple tax calculation (assuming intra-state 18% split for now, or use logic if state provided)
-        // For simplicity, using 9% CGST + 9% SGST as in original code
-        invoiceData.cgst = invoiceData.subtotal * 0.09;
-        invoiceData.sgst = invoiceData.subtotal * 0.09;
-        invoiceData.grandTotal = Math.round(invoiceData.subtotal + invoiceData.cgst + invoiceData.sgst);
-
-        // Save to Firestore
-        const docRef = await addDoc(collection(db, 'invoices'), invoiceData);
-
-        // Send Email if customer email is provided
-        const customerEmail = body.customerEmail || body.email || body.destinationEmail;
         const invoiceUrl = `https://shipmitra-admin.vercel.app/invoice/${docRef.id}`;
 
+        // Send Email if customer email is provided (non-fatal if fails)
+        const customerEmail = body.customerEmail || body.email || body.destinationEmail;
         if (customerEmail) {
-            await sendInvoiceEmail(customerEmail, invoiceUrl, invoiceNumber);
+            try {
+                await sendInvoiceEmail(customerEmail, invoiceUrl, invoiceNumber);
+            } catch {
+                // Email failure is non-fatal
+                console.error('Invoice email failed, continuing...');
+            }
         }
 
-        // Return success response with invoice details
+        // Return success response
         return NextResponse.json({
             success: true,
             message: 'Invoice created successfully',
@@ -149,7 +155,7 @@ export async function POST(request: NextRequest) {
                 id: docRef.id,
                 invoiceNumber,
                 grandTotal: invoiceData.grandTotal,
-                invoiceUrl: invoiceUrl,
+                invoiceUrl,
                 downloadUrl: invoiceUrl,
             },
         }, { status: 201, headers: corsHeaders });
@@ -157,7 +163,7 @@ export async function POST(request: NextRequest) {
     } catch (error) {
         console.error('Error creating invoice:', error);
         return NextResponse.json(
-            { success: false, error: 'Internal server error' },
+            { success: false, error: 'Internal server error', details: String(error) },
             { status: 500, headers: corsHeaders }
         );
     }
