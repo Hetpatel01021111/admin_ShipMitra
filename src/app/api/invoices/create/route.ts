@@ -133,7 +133,10 @@ export async function POST(request: NextRequest) {
         // Save to Firestore using Admin SDK (server-safe, no auth required)
         const docRef = await adminDb.collection('invoices').add(invoiceData);
 
-        const invoiceUrl = `https://shipmitra-admin.vercel.app/invoice/${docRef.id}`;
+        // Generate correct production URLs
+        const baseUrl = process.env.NEXT_PUBLIC_ADMIN_URL || 'https://admin.shipmitra.net';
+        const invoiceUrl = `${baseUrl}/invoice/${docRef.id}`;
+        const downloadUrl = `${baseUrl}/api/invoices/${docRef.id}/download`;
 
         // Send Email if customer email is provided (non-fatal if fails)
         const customerEmail = body.customerEmail || body.email || body.destinationEmail;
@@ -156,7 +159,7 @@ export async function POST(request: NextRequest) {
                 invoiceNumber,
                 grandTotal: invoiceData.grandTotal,
                 invoiceUrl,
-                downloadUrl: invoiceUrl,
+                downloadUrl,
             },
         }, { status: 201, headers: corsHeaders });
 
