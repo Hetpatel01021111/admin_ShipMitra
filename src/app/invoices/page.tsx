@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ProtectedRoute } from "@/lib/auth";
-import { getInvoices, deleteInvoice } from "@/lib/data";
+import { getInvoices, deleteInvoice, sendTrackingEmailAction } from "@/lib/data";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import { CreateInvoiceModal } from "@/components/invoices";
 import {
@@ -35,6 +35,7 @@ interface Invoice {
     originCity?: string;
     destinationCity?: string;
     originPhone?: string;
+    customerEmail?: string;
     awbNumber?: string;
     courierPartner?: string;
     // Amounts
@@ -117,9 +118,33 @@ function InvoicesContent() {
         }
     };
 
-    const handleSend = (invoice: Invoice) => {
-        // For now, just show a toast - email integration can be added later
-        alert(`Send invoice ${invoice.invoiceNumber} - Email integration coming soon!`);
+    const handleSend = async (invoice: Invoice) => {
+        if (!invoice.customerEmail) {
+            alert("Customer email is missing. Please edit the invoice to add an email address.");
+            return;
+        }
+
+        const confirmed = window.confirm(`Send tracking link to ${invoice.customerEmail}?`);
+        if (!confirmed) return;
+
+        try {
+            const result = await sendTrackingEmailAction(
+                invoice.id,
+                invoice.customerEmail,
+                invoice.destinationName || invoice.originName || "Customer",
+                invoice.invoiceNumber
+            );
+
+            if (result.success) {
+                alert("Tracking email sent successfully!");
+                loadInvoices(); // Refresh to show 'sent' status
+            } else {
+                alert(`Failed to send email: ${result.error}`);
+            }
+        } catch (error) {
+            console.error("Error sending tracking email:", error);
+            alert("An error occurred while sending the email.");
+        }
     };
 
     const handleDelete = async (invoice: Invoice) => {

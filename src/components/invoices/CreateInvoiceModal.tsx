@@ -105,6 +105,7 @@ export function CreateInvoiceModal({
     const [destinationState, setDestinationState] = useState("");
     const [destinationPhone, setDestinationPhone] = useState("");
     const [destinationGstin, setDestinationGstin] = useState("");
+    const [destinationEmail, setDestinationEmail] = useState("");
     const [destinationPincodeLoading, setDestinationPincodeLoading] = useState(false);
 
     // Package Details
@@ -156,6 +157,7 @@ export function CreateInvoiceModal({
             setDestinationState(editInvoice.destinationState || "");
             setDestinationPhone(editInvoice.destinationPhone || "");
             setDestinationGstin(editInvoice.destinationGstin || "");
+            setDestinationEmail(editInvoice.customerEmail || editInvoice.destinationEmail || "");
             // Packages
             if (editInvoice.packages && editInvoice.packages.length > 0) {
                 setPackages(editInvoice.packages.map((pkg: any, index: number) => ({
@@ -378,6 +380,7 @@ export function CreateInvoiceModal({
                 if (data.destination.pincode) setDestinationPincode(data.destination.pincode);
                 if (data.destination.phone) setDestinationPhone(data.destination.phone);
                 if (data.destination.gstin) setDestinationGstin(data.destination.gstin);
+                if (data.destination.email) setDestinationEmail(data.destination.email);
             }
 
             // Packages
@@ -434,6 +437,7 @@ export function CreateInvoiceModal({
                 destinationPincode,
                 destinationPhone,
                 destinationGstin,
+                customerEmail: destinationEmail,
                 // Packages
                 packages: packagesWithDimWeight,
                 declaredValue,
@@ -510,6 +514,7 @@ export function CreateInvoiceModal({
             destinationPincode,
             destinationPhone,
             destinationGstin,
+            customerEmail: destinationEmail,
             packages: packagesWithDimWeight,
             declaredValue,
             paymentMode,
@@ -554,6 +559,7 @@ export function CreateInvoiceModal({
         setDestinationState("");
         setDestinationPhone("");
         setDestinationGstin("");
+        setDestinationEmail("");
         setPackages([{ id: "1", productName: "", boxes: 1, quantity: 1, length: 0, width: 0, height: 0, actualWeight: 0 }]);
         setDeclaredValue(0);
         setPaymentMode("prepaid");
@@ -788,6 +794,17 @@ export function CreateInvoiceModal({
                                     <div className="col-span-2">
                                         <Label className="text-xs">GSTIN (Optional)</Label>
                                         <Input value={destinationGstin} onChange={(e) => setDestinationGstin(e.target.value)} placeholder="24XXXXXXXXXX" className="mt-1 h-9" />
+                                    </div>
+                                    <div className="col-span-2">
+                                        <Label className="text-xs">Email * (Required for tracking link)</Label>
+                                        <Input
+                                            type="email"
+                                            value={destinationEmail}
+                                            onChange={(e) => setDestinationEmail(e.target.value)}
+                                            placeholder="customer@example.com"
+                                            className="mt-1 h-9"
+                                            required
+                                        />
                                     </div>
                                 </div>
                                 <div className="flex gap-2 mt-2">

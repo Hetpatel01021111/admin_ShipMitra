@@ -864,3 +864,35 @@ export const getOrderStatusCounts = async () => {
         return [];
     }
 };
+
+export const sendTrackingEmailAction = async (invoiceId: string, customerEmail: string, customerName: string, invoiceNumber: string): Promise<{ success: boolean; error?: string }> => {
+    try {
+        const response = await fetch('https://us-central1-shipmitra-d250b.cloudfunctions.net/sendTrackingEmailHttp', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                customerEmail,
+                customerName,
+                invoiceNumber
+            }),
+        });
+
+        const data = await response.json();
+        if (data.success) {
+            // Update invoice status in Firestore to 'sent' if it wasn't already
+            const docRef = doc(db, 'invoices', invoiceId);
+            await updateDoc(docRef, {
+                status: 'sent',
+                trackingEmailSentAt: serverTimestamp()
+            });
+            return { success: true };
+        } else {
+            return { success: false, error: data.error || 'Failed to send tracking email' };
+        }
+    } catch (error: any) {
+        console.error('Error in sendTrackingEmailAction:', error);
+        return { success: false, error: error.message || 'Internal error' };
+    }
+};
