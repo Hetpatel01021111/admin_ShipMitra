@@ -36,3 +36,4 @@ next-env.d.ts
 
 # Shipmitra folder to be excluded
 /shipmitra
+firebase-admin.json

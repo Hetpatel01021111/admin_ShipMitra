@@ -459,11 +459,18 @@ export function CreateInvoiceModal({
             let success = false;
             if (isEditMode && editInvoice?.id) {
                 // Update existing invoice
-                success = await updateInvoice(editInvoice.id, invoiceData);
+                const result = await updateInvoice(editInvoice.id, invoiceData);
+                success = result.success;
+                if (!success) {
+                    alert(`Failed to update invoice: ${result.error || 'Check console details.'}`);
+                }
             } else {
                 // Create new invoice
                 const invoiceId = await createInvoice(invoiceData);
                 success = !!invoiceId;
+                if (!success) {
+                    alert("Failed to create invoice. Please try again.");
+                }
             }
 
             if (success) {

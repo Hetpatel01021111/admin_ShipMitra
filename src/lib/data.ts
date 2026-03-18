@@ -689,7 +689,7 @@ export const updateInvoiceStatus = async (
 export const updateInvoice = async (
     invoiceId: string,
     invoiceData: any
-): Promise<boolean> => {
+): Promise<{ success: boolean; error?: string }> => {
     try {
         const docRef = doc(db, 'invoices', invoiceId);
         // Remove fields that should not be updated
@@ -699,10 +699,54 @@ export const updateInvoice = async (
             ...updateData,
             updatedAt: serverTimestamp(),
         });
-        return true;
-    } catch (error) {
+
+        // Also update the corresponding booking record if it exists
+        try {
+            const bookingsSnapshot = await getDocs(
+                query(
+                    collection(db, 'bookings'),
+                    where('invoiceId', '==', invoiceId)
+                )
+            );
+
+            if (!bookingsSnapshot.empty) {
+                const batch = writeBatch(db);
+                bookingsSnapshot.docs.forEach((bookingDoc) => {
+                    const bookingUpdateData = {
+                        senderName: invoiceData.originName || '',
+                        senderPhone: invoiceData.originPhone || '',
+                        senderAddress: invoiceData.originAddress || '',
+                        senderCity: invoiceData.originCity || '',
+                        senderState: invoiceData.originState || '',
+                        senderPincode: invoiceData.originPincode || '',
+                        receiverName: invoiceData.destinationName || '',
+                        receiverPhone: invoiceData.destinationPhone || '',
+                        receiverAddress: invoiceData.destinationAddress || '',
+                        receiverCity: invoiceData.destinationCity || '',
+                        receiverState: invoiceData.destinationState || '',
+                        receiverPincode: invoiceData.destinationPincode || '',
+                        weight: invoiceData.packages && invoiceData.packages.length > 0
+                            ? (invoiceData.packages[0].actualWeight || 0)
+                            : invoiceData.weight || 0,
+                        packages: invoiceData.packages || [],
+                        declaredValue: invoiceData.declaredValue || 0,
+                        paymentMode: invoiceData.paymentMode || 'prepaid',
+                        codAmount: invoiceData.codAmount || 0,
+                        amount: invoiceData.grandTotal ?? invoiceData.subtotal ?? 0,
+                        updatedAt: serverTimestamp(),
+                    };
+                    batch.update(bookingDoc.ref, bookingUpdateData);
+                });
+                await batch.commit();
+            }
+        } catch (bookingError) {
+            console.warn('Could not sync booking details (non-fatal):', bookingError);
+        }
+
+        return { success: true };
+    } catch (error: any) {
         console.error('Error updating invoice:', error);
-        return false;
+        return { success: false, error: error.message || "Unknown error occurred" };
     }
 };
 
